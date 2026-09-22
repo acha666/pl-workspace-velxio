@@ -1,0 +1,104 @@
+name: Docker
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ startsWith(github.ref, 'refs/tags/') && 'release' || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  arduino:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate release
+        if: startsWith(github.ref, 'refs/tags/')
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo 'Use a stable release tag such as v1.0.0.' >&2
+            exit 1
+          fi
+          {
+            echo "version=${RELEASE_TAG#v}"
+            echo "major=${BASH_REMATCH[1]}"
+            echo "minor=${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          } >> "$GITHUB_OUTPUT"
+          test -n "$DOCKERHUB_IMAGE" && test -n "$DOCKERHUB_USERNAME"
+
+      - name: Prepare upstream source
+        run: python3 scripts/prepare.py
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Test frontend
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .build
+          file: docker/Dockerfile
+          target: frontend-test
+          platforms: linux/amd64
+          cache-from: type=gha,scope=arduino
+
+      - name: Test backend and question templates
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .build
+          file: docker/Dockerfile
+          target: backend-test
+          platforms: linux/amd64
+          cache-from: type=gha,scope=arduino
+
+      - name: Build Arduino workspace
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .build
+          file: docker/Dockerfile
+          target: arduino
+          platforms: linux/amd64
+          load: true
+          tags: pl-workspace-velxio:test
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.release.outputs.version || github.sha }}
+          cache-from: type=gha,scope=arduino
+          cache-to: type=gha,mode=max,scope=arduino
+
+      - name: Test workspace
+        run: bash scripts/test.sh pl-workspace-velxio:test
+
+      - name: Log in to Docker Hub
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Publish tested image
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          DOCKERHUB_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
+          VERSION: ${{ steps.release.outputs.version }}
+          MINOR: ${{ steps.release.outputs.minor }}
+          MAJOR: ${{ steps.release.outputs.major }}
+        run: |
+          for tag in "arduino-$VERSION" "arduino-$MINOR" "arduino-$MAJOR" arduino; do
+            docker tag pl-workspace-velxio:test "$DOCKERHUB_IMAGE:$tag"
+            docker push "$DOCKERHUB_IMAGE:$tag"
+          done

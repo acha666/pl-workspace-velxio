@@ -1,0 +1,14 @@
+{
+  "uuid": "46f74d29-0bcd-443b-ae50-2b15171d5414",
+  "title": "Arduino: Blink",
+  "type": "v3",
+  "singleVariant": true,
+  "gradingMethod": "Manual",
+  "showCorrectAnswer": false,
+  "workspaceOptions": {
+    "image": "acha666/pl-workspace-velxio:arduino-1.0.0",
+    "enableNetworking": false,
+    "gradedFiles": ["project.vlx"]
+  },
+  "topic": "Arduino"
+}

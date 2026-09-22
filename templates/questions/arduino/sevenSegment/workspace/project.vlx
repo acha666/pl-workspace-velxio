@@ -1,0 +1,368 @@
+{
+  "format": "velxio-project",
+  "version": 1,
+  "exportedAt": "2026-09-22T00:00:00.000Z",
+  "name": "Arduino: Seven-segment display",
+  "boards": [
+    {
+      "id": "arduino-uno",
+      "name": "Arduino Uno",
+      "boardKind": "arduino-uno",
+      "x": 80,
+      "y": 140,
+      "activeFileGroupId": "group-arduino-uno",
+      "languageMode": "arduino",
+      "serialBaudRate": 9600,
+      "libraries": []
+    }
+  ],
+  "fileGroups": {
+    "group-arduino-uno": [
+      {
+        "name": "sketch.ino",
+        "content": "// Common cathode display: A..G connect to D2..D8 through 220 ohm resistors.\n// HIGH lights a segment. The decimal point is not connected.\nconst int segmentPins[7] = {2, 3, 4, 5, 6, 7, 8}; // A B C D E F G\n\nvoid showDigit(int digit) {\n  // TODO: Set all seven segments to display digit (0 to 9).\n}\n\nvoid setup() {\n  // TODO: Configure the segment pins.\n}\n\nvoid loop() {\n  // TODO: Count from 0 to 9, displaying each digit for one second.\n}\n"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "display",
+      "metadataId": "7segment",
+      "x": 580,
+      "y": 220,
+      "properties": {
+        "digits": 1,
+        "common": "cathode",
+        "color": "red"
+      }
+    },
+    {
+      "id": "resistor_a",
+      "metadataId": "resistor",
+      "x": 390,
+      "y": 105,
+      "properties": {
+        "value": "220",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "resistor_b",
+      "metadataId": "resistor",
+      "x": 390,
+      "y": 153,
+      "properties": {
+        "value": "220",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "resistor_c",
+      "metadataId": "resistor",
+      "x": 390,
+      "y": 201,
+      "properties": {
+        "value": "220",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "resistor_d",
+      "metadataId": "resistor",
+      "x": 390,
+      "y": 249,
+      "properties": {
+        "value": "220",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "resistor_e",
+      "metadataId": "resistor",
+      "x": 390,
+      "y": 297,
+      "properties": {
+        "value": "220",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "resistor_f",
+      "metadataId": "resistor",
+      "x": 390,
+      "y": 345,
+      "properties": {
+        "value": "220",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "resistor_g",
+      "metadataId": "resistor",
+      "x": 390,
+      "y": 393,
+      "properties": {
+        "value": "220",
+        "rotation": 0
+      }
+    }
+  ],
+  "wires": [
+    {
+      "id": "pin_a",
+      "start": {
+        "componentId": "arduino-uno",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "resistor_a",
+        "pinName": "1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#ff4444",
+      "waypoints": []
+    },
+    {
+      "id": "segment_a",
+      "start": {
+        "componentId": "resistor_a",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "display",
+        "pinName": "A",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#ff4444",
+      "waypoints": []
+    },
+    {
+      "id": "pin_b",
+      "start": {
+        "componentId": "arduino-uno",
+        "pinName": "3",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "resistor_b",
+        "pinName": "1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#ff8800",
+      "waypoints": []
+    },
+    {
+      "id": "segment_b",
+      "start": {
+        "componentId": "resistor_b",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "display",
+        "pinName": "B",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#ff8800",
+      "waypoints": []
+    },
+    {
+      "id": "pin_c",
+      "start": {
+        "componentId": "arduino-uno",
+        "pinName": "4",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "resistor_c",
+        "pinName": "1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#e0b000",
+      "waypoints": []
+    },
+    {
+      "id": "segment_c",
+      "start": {
+        "componentId": "resistor_c",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "display",
+        "pinName": "C",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#e0b000",
+      "waypoints": []
+    },
+    {
+      "id": "pin_d",
+      "start": {
+        "componentId": "arduino-uno",
+        "pinName": "5",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "resistor_d",
+        "pinName": "1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#44bb44",
+      "waypoints": []
+    },
+    {
+      "id": "segment_d",
+      "start": {
+        "componentId": "resistor_d",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "display",
+        "pinName": "D",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#44bb44",
+      "waypoints": []
+    },
+    {
+      "id": "pin_e",
+      "start": {
+        "componentId": "arduino-uno",
+        "pinName": "6",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "resistor_e",
+        "pinName": "1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#4488ff",
+      "waypoints": []
+    },
+    {
+      "id": "segment_e",
+      "start": {
+        "componentId": "resistor_e",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "display",
+        "pinName": "E",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#4488ff",
+      "waypoints": []
+    },
+    {
+      "id": "pin_f",
+      "start": {
+        "componentId": "arduino-uno",
+        "pinName": "7",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "resistor_f",
+        "pinName": "1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#aa44ff",
+      "waypoints": []
+    },
+    {
+      "id": "segment_f",
+      "start": {
+        "componentId": "resistor_f",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "display",
+        "pinName": "F",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#aa44ff",
+      "waypoints": []
+    },
+    {
+      "id": "pin_g",
+      "start": {
+        "componentId": "arduino-uno",
+        "pinName": "8",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "resistor_g",
+        "pinName": "1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#888888",
+      "waypoints": []
+    },
+    {
+      "id": "segment_g",
+      "start": {
+        "componentId": "resistor_g",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "display",
+        "pinName": "G",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#888888",
+      "waypoints": []
+    },
+    {
+      "id": "common_ground",
+      "start": {
+        "componentId": "display",
+        "pinName": "COM.1",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "arduino-uno",
+        "pinName": "GND.1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#000000",
+      "waypoints": []
+    }
+  ],
+  "activeBoardId": "arduino-uno"
+}

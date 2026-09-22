@@ -1,0 +1,68 @@
+.pl-workspace {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.pl-workspace > .app {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+}
+.pl-workspace-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 12px;
+  border-bottom: 1px solid var(--color-border-default);
+  background: var(--color-bg-header);
+}
+.pl-workspace-status [role='status'] {
+  font-weight: 650;
+  min-width: 9rem;
+}
+.pl-workspace-status button,
+.pl-workspace-error button,
+.pl-workspace-loading button {
+  padding: 0.25rem 0.6rem;
+  color: inherit;
+  background: var(--color-bg-canvas);
+  border: 1px solid var(--color-border-default);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.pl-workspace-status button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.pl-workspace-status a {
+  margin-left: auto;
+  color: inherit;
+}
+.pl-workspace-instruction {
+  color: var(--color-fg-muted);
+}
+.pl-workspace-error {
+  padding: 0.65rem 0.8rem;
+  color: #9b2c21;
+  background: #ffebe6;
+  font-size: 13px;
+}
+.pl-workspace-loading {
+  margin: 3rem auto;
+  max-width: 640px;
+  padding: 1rem;
+}
+.pl-workspace-loading h1 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+}
+/* Preserve the original file tree; this exercise has one fixed sketch. */
+.pl-workspace .file-explorer-header-actions > .file-explorer-new-btn,
+.pl-workspace .file-explorer-header-actions > button[title^='Open project'],
+.pl-workspace .fe-board-actions-row > button,
+.pl-workspace .fe-folder-actions,
+.pl-workspace [data-velxio-slot='agent-chat'] {
+  display: none;
+}

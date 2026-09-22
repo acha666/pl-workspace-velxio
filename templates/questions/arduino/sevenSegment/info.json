@@ -1,0 +1,14 @@
+{
+  "uuid": "d0f34d08-00b6-4727-bb4c-1bc424995f77",
+  "title": "Arduino: Seven-segment display",
+  "type": "v3",
+  "singleVariant": true,
+  "gradingMethod": "Manual",
+  "showCorrectAnswer": false,
+  "workspaceOptions": {
+    "image": "acha666/pl-workspace-velxio:arduino-1.0.0",
+    "enableNetworking": false,
+    "gradedFiles": ["project.vlx"]
+  },
+  "topic": "Arduino"
+}
