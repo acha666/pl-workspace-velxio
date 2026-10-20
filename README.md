@@ -57,7 +57,7 @@ Use a fresh `--output` directory when preparing again. Tests run in containers a
 
 ## Docker Hub releases
 
-Stable Git tags such as `v1.1.0` run all container tests before publishing `arduino-workspace-1.1.0`, `arduino-workspace-1.1`, `arduino-workspace-1` and `arduino-workspace`, and the matching `arduino-grader-` tags, to Docker Hub. Release 1.0.0 was published only as `arduino-1.0.0` and its `arduino-` aliases.
+Stable Git tags such as `v2.0.0` run all container tests before publishing `arduino-workspace-2.0.0`, `arduino-workspace-2.0`, `arduino-workspace-2` and `arduino-workspace`, and the matching `arduino-grader-` tags, to Docker Hub. Release 1.0.0 was published only as `arduino-1.0.0` and its `arduino-` aliases.
 
 Before tagging, update the [changelog](CHANGELOG.md) and template image versions, run the checks above, then commit and push the release commit and tag. Confirm the tag workflow succeeds and the versioned images are available before using them in a course.
 
