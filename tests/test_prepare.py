@@ -55,35 +55,46 @@ def project(tmp_path, monkeypatch):
     git(repository, "init", "--quiet")
     root = repository / "nested workspace"
     for directory in [
-        "patches",
-        "adapter/frontend",
-        "dependencies",
+        "workspace/patches",
+        "workspace/adapter/frontend",
+        "workspace/dependencies",
         "docker",
         "scripts",
         "tests",
-        "templates",
+        "course",
+        "grader",
     ]:
         (root / directory).mkdir(parents=True)
-    (root / "patches/workspace.patch").write_bytes(patch)
-    (root / "adapter/frontend/workspace.ts").write_text(
+    (root / "workspace/patches/workspace.patch").write_bytes(patch)
+    (root / "workspace/adapter/frontend/workspace.ts").write_text(
         "export const workspace = true;\n"
     )
-    (root / "dependencies/frontend-package-lock.json").write_text("{}\n")
-    (root / "dependencies/backend-constraints.txt").write_text("fastapi==0.135.1\n")
+    (root / "workspace/dependencies/frontend-package-lock.json").write_text("{}\n")
+    (root / "workspace/dependencies/backend-constraints.txt").write_text(
+        "fastapi==0.135.1\n"
+    )
     (root / "docker/Dockerfile").write_text(
         "ARG VELXIO_BASE_IMAGE=example/runtime@sha256:123\n"
+        "ARG SIMAVR_COMMIT=abc123\n"
         "RUN arduino-cli core install arduino:avr@1.8.6\n"
     )
     shutil.copy2(PREPARE, root / "scripts/prepare.py")
-    for name in ["LICENSE", "SOURCE.md", "tests/answer.txt", "templates/answer.txt"]:
+    for name in [
+        "LICENSE",
+        "SOURCE.md",
+        "tests/answer.txt",
+        "course/answer.txt",
+        "grader/answer.txt",
+    ]:
         (root / name).write_text(name + "\n")
-    (root / "upstream.lock.json").write_text(
+    (root / "toolchain.lock.json").write_text(
         json.dumps(
             {
                 "repository": str(upstream),
                 "commit": commit,
                 "image": "example/runtime@sha256:123",
                 "arduino_avr_core": "1.8.6",
+                "simavr_commit": "abc123",
             }
         )
     )
@@ -122,7 +133,9 @@ def test_nested_checkout_applies_patch_and_distributed_source_rebuilds(
     distributed = root / "distributed-source"
     with tarfile.open(output / "pl-adapter-source.tar.gz") as archive:
         names = archive.getnames()
-        assert not any(name.split("/")[0] in {"tests", "templates"} for name in names)
+        assert not any(
+            name.split("/")[0] in {"tests", "course", "grader"} for name in names
+        )
         archive.extractall(distributed, filter="data")
     monkeypatch.setattr(prepare, "ROOT", distributed)
     rebuilt = distributed / ".build"
@@ -131,13 +144,14 @@ def test_nested_checkout_applies_patch_and_distributed_source_rebuilds(
         rebuilt / "upstream/frontend/example.txt"
     ).read_text() == "PrairieLearn patch applied.\n"
     assert (rebuilt / "upstream/frontend/workspace.ts").is_file()
-    assert list((rebuilt / "tests").iterdir()) == []
-    assert list((rebuilt / "templates").iterdir()) == []
+    for name in ["tests", "course", "grader"]:
+        assert (output / name / "answer.txt").is_file()
+        assert list((rebuilt / name).iterdir()) == []
 
 
 def test_failed_patch_leaves_no_output(project, monkeypatch):
     root, upstream = project
-    (root / "patches/workspace.patch").write_text("Not a patch.\n")
+    (root / "workspace/patches/workspace.patch").write_text("Not a patch.\n")
     output = root / ".build"
     with pytest.raises(subprocess.CalledProcessError):
         run_prepare(monkeypatch, upstream, output)
@@ -177,11 +191,12 @@ def test_existing_output_is_preserved(project, monkeypatch):
         ("image", "example/changed@sha256:456"),
         ("arduino_avr_core", "0.0.0"),
         ("commit", "0" * 40),
+        ("simavr_commit", "def456"),
     ],
 )
 def test_lock_drift_is_rejected(project, monkeypatch, field, value):
     root, upstream = project
-    lock_path = root / "upstream.lock.json"
+    lock_path = root / "toolchain.lock.json"
     lock = json.loads(lock_path.read_text())
     lock[field] = value
     lock_path.write_text(json.dumps(lock))

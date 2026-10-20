@@ -1,0 +1,19 @@
+{
+  "uuid": "ad9e454b-5dd7-4018-858f-8e7c7e600ea5",
+  "title": "Arduino: Blink without delay",
+  "type": "v3",
+  "singleVariant": true,
+  "gradingMethod": "External",
+  "showCorrectAnswer": false,
+  "workspaceOptions": {
+    "image": "acha666/pl-workspace-velxio:arduino-workspace-1.1.0",
+    "enableNetworking": false,
+    "gradedFiles": ["project.vlx"]
+  },
+  "externalGradingOptions": {
+    "image": "acha666/pl-workspace-velxio:arduino-grader-1.1.0",
+    "entrypoint": "python3 /grade/tests/test.py",
+    "timeout": 60
+  },
+  "topic": "Arduino"
+}

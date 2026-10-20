@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
-QUESTIONS = ROOT / "templates/questions/arduino"
+QUESTIONS = ROOT / "course/questions/arduino"
 
 
 def encode(project):
@@ -30,7 +30,7 @@ def add_submitted_file(data, name, *, raw_contents):
 
 
 spec = importlib.util.spec_from_file_location(
-    "velxio", ROOT / "templates/serverFilesCourse/velxio.py"
+    "velxio", ROOT / "course/serverFilesCourse/velxio.py"
 )
 velxio = importlib.util.module_from_spec(spec)
 with patch.dict(
@@ -141,7 +141,7 @@ class TemplateTests(unittest.TestCase):
             with self.subTest(question=question.name):
                 info = json.loads((question / "info.json").read_text())
                 project = json.loads((question / "workspace/project.vlx").read_text())
-                self.assertEqual(info["gradingMethod"], "Manual")
+                self.assertIn(info["gradingMethod"], ["Manual", "External"])
                 self.assertEqual(
                     info["workspaceOptions"]["gradedFiles"], ["project.vlx"]
                 )
@@ -152,6 +152,38 @@ class TemplateTests(unittest.TestCase):
                 self.assertEqual(
                     sorted(path.name for path in (question / "workspace").iterdir()),
                     ["project.vlx"],
+                )
+
+    def test_autograded_questions_pair_matching_workspace_and_grader_releases(self):
+        graded = [
+            question
+            for question in sorted(QUESTIONS.iterdir())
+            if json.loads((question / "info.json").read_text())["gradingMethod"]
+            == "External"
+        ]
+        self.assertTrue(graded)
+        for question in graded:
+            with self.subTest(question=question.name):
+                info = json.loads((question / "info.json").read_text())
+                workspace = info["workspaceOptions"]["image"]
+                grader = info["externalGradingOptions"]["image"]
+                repository, _, version = workspace.rpartition(":arduino-workspace-")
+                self.assertTrue(repository and version)
+                self.assertEqual(grader, f"{repository}:arduino-grader-{version}")
+                self.assertEqual(
+                    info["externalGradingOptions"]["entrypoint"],
+                    "python3 /grade/tests/test.py",
+                )
+                self.assertTrue((question / "tests/test.py").is_file())
+                expected = json.loads(
+                    (question / "grader-cases/expected.json").read_text()
+                )
+                self.assertEqual(expected["reference.ino"], 1.0)
+                self.assertEqual(
+                    sorted(expected),
+                    sorted(
+                        path.name for path in (question / "grader-cases").glob("*.ino")
+                    ),
                 )
 
     def test_seven_segment_connections_have_individual_current_limiting_resistors(self):

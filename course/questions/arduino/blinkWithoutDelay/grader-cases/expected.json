@@ -1,0 +1,9 @@
+{
+  "reference.ino": 1.0,
+  "serial-debug.ino": 1.0,
+  "wrong-period.ino": 0.25,
+  "no-pinmode.ino": 0.0,
+  "uses-delay.ino": 0.0,
+  "compile-error.ino": 0.0,
+  "include-tests.ino": 0.0
+}

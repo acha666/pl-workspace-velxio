@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare a pinned upstream checkout and the small PL Docker build context."""
+"""Prepare a pinned upstream checkout and the Docker build context for both images."""
 
 import argparse
 import io
@@ -24,10 +24,13 @@ def validate_runtime(lock):
     dockerfile = (ROOT / "docker/Dockerfile").read_text(encoding="utf-8")
     image = re.search(r"^ARG VELXIO_BASE_IMAGE=(\S+)$", dockerfile, re.MULTILINE)
     core = re.search(r"arduino-cli core install arduino:avr@(\S+)", dockerfile)
+    simavr = re.search(r"^ARG SIMAVR_COMMIT=(\S+)$", dockerfile, re.MULTILINE)
     if image is None or image.group(1) != lock["image"]:
-        raise SystemExit("Dockerfile base image does not match upstream.lock.json.")
+        raise SystemExit("Dockerfile base image does not match toolchain.lock.json.")
     if core is None or core.group(1) != lock["arduino_avr_core"]:
-        raise SystemExit("Dockerfile Arduino core does not match upstream.lock.json.")
+        raise SystemExit("Dockerfile Arduino core does not match toolchain.lock.json.")
+    if simavr is None or simavr.group(1) != lock["simavr_commit"]:
+        raise SystemExit("Dockerfile simavr commit does not match toolchain.lock.json.")
 
 
 def main():
@@ -39,9 +42,9 @@ def main():
         help="Use a local checkout at the locked commit instead of fetching it.",
     )
     args = parser.parse_args()
-    lock = json.loads((ROOT / "upstream.lock.json").read_text())
+    lock = json.loads((ROOT / "toolchain.lock.json").read_text())
     validate_runtime(lock)
-    patches = sorted((ROOT / "patches").glob("*.patch"))
+    patches = sorted((ROOT / "workspace/patches").glob("*.patch"))
     if not patches:
         parser.error("No PL adapter patch was found.")
     output = args.output.resolve()
@@ -73,34 +76,33 @@ def main():
         for patch in patches:
             git("apply", "--check", str(patch), cwd=source)
             git("apply", str(patch), cwd=source)
-        shutil.copytree(ROOT / "adapter", source, dirs_exist_ok=True)
+        shutil.copytree(ROOT / "workspace/adapter", source, dirs_exist_ok=True)
         shutil.copy2(
-            ROOT / "dependencies/frontend-package-lock.json",
+            ROOT / "workspace/dependencies/frontend-package-lock.json",
             source / "frontend/package-lock.json",
         )
         shutil.copy2(
-            ROOT / "dependencies/backend-constraints.txt",
+            ROOT / "workspace/dependencies/backend-constraints.txt",
             source / "backend/constraints.txt",
         )
-        for name in ["docker", "scripts"]:
+        for name in ["docker", "scripts", "workspace"]:
             shutil.copytree(ROOT / name, context / name)
-        for name in ["tests", "templates"]:
+        for name in ["grader", "course", "tests"]:
             if (ROOT / name).is_dir():
                 shutil.copytree(ROOT / name, context / name)
             else:
-                # The downloadable source excludes instructor fixtures; these
-                # directories are needed only by the optional test target.
+                # The workspace's downloadable source excludes the grader,
+                # course files and instructor fixtures, which only the grader
+                # and test targets need.
                 (context / name).mkdir()
         # Local offer of the adapter source, exact upstream source URL, and
         # build inputs. Questions and instructor answers are excluded.
         with tarfile.open(context / "pl-adapter-source.tar.gz", "w:gz") as tar:
             for name in [
-                "adapter",
-                "patches",
-                "dependencies",
+                "workspace",
                 "docker",
                 "scripts",
-                "upstream.lock.json",
+                "toolchain.lock.json",
                 "LICENSE",
                 "SOURCE.md",
             ]:
@@ -121,6 +123,7 @@ def main():
     print(f"Prepared {output}")
     print(f"Upstream: {lock['commit']}")
     print(f"Runtime: {lock['image']}")
+    print(f"simavr: {lock['simavr_commit']}")
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@
   "gradingMethod": "Manual",
   "showCorrectAnswer": false,
   "workspaceOptions": {
-    "image": "acha666/pl-workspace-velxio:arduino-1.0.0",
+    "image": "acha666/pl-workspace-velxio:arduino-workspace-1.1.0",
     "enableNetworking": false,
     "gradedFiles": ["project.vlx"]
   },

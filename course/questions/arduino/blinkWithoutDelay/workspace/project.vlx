@@ -1,0 +1,30 @@
+{
+  "format": "velxio-project",
+  "version": 1,
+  "exportedAt": "2026-09-22T00:00:00.000Z",
+  "name": "Arduino: Blink without delay",
+  "boards": [
+    {
+      "id": "arduino-uno",
+      "name": "Arduino Uno",
+      "boardKind": "arduino-uno",
+      "x": 80,
+      "y": 140,
+      "activeFileGroupId": "group-arduino-uno",
+      "languageMode": "arduino",
+      "serialBaudRate": 9600,
+      "libraries": []
+    }
+  ],
+  "fileGroups": {
+    "group-arduino-uno": [
+      {
+        "name": "sketch.ino",
+        "content": "// Blink the onboard LED with millis(): 500 ms on, then 500 ms off.\nconst int ledPin = LED_BUILTIN;\n\nvoid setup() {\n  // TODO: Configure the LED pin.\n}\n\nvoid loop() {\n  // TODO: Switch the LED whenever 500 ms have passed, without delay().\n}\n"
+      }
+    ]
+  },
+  "components": [],
+  "wires": [],
+  "activeBoardId": "arduino-uno"
+}

@@ -25,7 +25,7 @@ docker build -t pl-workspace-velxio:browser-tests tests/browser
 for template in blink sevenSegment; do
     volume=$(docker volume create)
     container=$(create_workspace)
-    docker cp "templates/questions/arduino/$template/workspace/project.vlx" "$container:/workspace/project.vlx"
+    docker cp "course/questions/arduino/$template/workspace/project.vlx" "$container:/workspace/project.vlx"
     docker cp scripts/smoke.py "$container:/tmp/smoke.py"
     docker start "$container" >/dev/null
     docker exec "$container" python /tmp/smoke.py
