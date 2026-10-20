@@ -1,0 +1,377 @@
+diff --git a/frontend/src/components/ComponentInfoPanel.tsx b/frontend/src/components/ComponentInfoPanel.tsx
+--- a/frontend/src/components/ComponentInfoPanel.tsx
++++ b/frontend/src/components/ComponentInfoPanel.tsx
+@@ -1,3 +1,4 @@
++import { PL_MODE } from '../pl/config';
+ /**
+  * Component Info Panel
+  *
+@@ -168,7 +169,7 @@
+         </div>
+       )}
+ 
+-      {buyHref && (
++      {!PL_MODE && buyHref && (
+         <div className="cip-footer">
+           <a
+             className="cip-buy"
+diff --git a/frontend/src/components/ComponentPickerModal.tsx b/frontend/src/components/ComponentPickerModal.tsx
+--- a/frontend/src/components/ComponentPickerModal.tsx
++++ b/frontend/src/components/ComponentPickerModal.tsx
+@@ -1,3 +1,4 @@
++import { PL_MODE } from '../pl/config';
+ /**
+  * Component Picker Modal
+  *
+@@ -364,6 +365,7 @@
+     // metadata: saved projects that already placed one must keep rendering.
+     components = components.filter((c) => !UNSIMULATED_BOARD_SHELLS.has(c.id));
+     components = components.filter((c) => !GESTURE_ONLY_COMPONENTS.has(c.id));
++    if (PL_MODE) components = components.filter((c) => c.id !== 'custom-chip');
+ 
+     // Maker-first ordering: most users reach for a sensor, an LED or a
+     // display far more often than a bare transistor or a 74HC gate, so
+@@ -391,7 +393,7 @@
+ 
+   // Boards list: static OSS kinds + overlay-registered boards (proBoardRegistry).
+   const allBoards = useMemo(() => {
+-    return [...ALL_BOARDS, ...(listProBoards().map((d) => d.kind) as BoardKind[])];
++    return PL_MODE ? [] : [...ALL_BOARDS, ...(listProBoards().map((d) => d.kind) as BoardKind[])];
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [proBoardsVersion]);
+ 
+@@ -399,7 +401,7 @@
+   // hidden automatically in any build whose registry has the real component
+   // (the hosted overlay merges it in) — same contract as VISIBLE_BOARD_ADS.
+   const visibleComponentAds = useMemo(() => {
+-    if (isLoading) return [];
++    if (PL_MODE || isLoading) return [];
+     // An ad has no metadata object, so it is matched on its own category
+     // against whichever branch the rail has selected.
+     const selectedCat = selectedKey.startsWith('cat:')
+@@ -567,7 +569,7 @@
+     if (isLoading) return [];
+     const out: GridSection[] = [];
+ 
+-    const wantsBoards = !!onSelectBoard && (selectedKey === KEY_ALL || selectedKey === KEY_BOARDS);
++    const wantsBoards = !PL_MODE && !!onSelectBoard && (selectedKey === KEY_ALL || selectedKey === KEY_BOARDS);
+     if (wantsBoards && (matchingBoards.length > 0 || matchingBoardAds.length > 0)) {
+       out.push({
+         kind: 'boards',
+diff --git a/frontend/src/components/editor/EditorMenuBar.tsx b/frontend/src/components/editor/EditorMenuBar.tsx
+--- a/frontend/src/components/editor/EditorMenuBar.tsx
++++ b/frontend/src/components/editor/EditorMenuBar.tsx
+@@ -1,3 +1,4 @@
++import { PL_MODE, workspaceCommandAllowed, workspaceHelpItems } from '../../pl/config';
+ /**
+  * EditorMenuBar — File / Edit menus for the editor header.
+  *
+@@ -451,7 +452,7 @@
+           {items
+             .filter(
+               (item) =>
+-                item.kind !== 'command' || !item.optional || hasEditorCommand(item.id),
++                item.kind !== 'command' || (workspaceCommandAllowed(item.id) && (!item.optional || hasEditorCommand(item.id))),
+             )
+             .map((item, i) =>
+               item.kind === 'separator' ? (
+@@ -472,8 +473,8 @@
+       {menu('file', t('editor.menu.file', 'File'), fileItems)}
+       {menu('edit', t('editor.menu.edit', 'Edit'), editItems)}
+       {menu('view', t('editor.menu.view', 'View'), viewItems)}
+-      {menu('account', t('editor.menu.account', 'Account'), [])}
+-      {menu('help', t('editor.menu.help', 'Help'), helpItems)}
++      {!PL_MODE && menu('account', t('editor.menu.account', 'Account'), [])}
++      {menu('help', t('editor.menu.help', 'Help'), PL_MODE ? workspaceHelpItems() : helpItems)}
+     </div>
+   );
+ };
+diff --git a/frontend/src/components/editor/EditorToolbar.tsx b/frontend/src/components/editor/EditorToolbar.tsx
+--- a/frontend/src/components/editor/EditorToolbar.tsx
++++ b/frontend/src/components/editor/EditorToolbar.tsx
+@@ -1,3 +1,4 @@
++import { PL_MODE } from '../../pl/config';
+ import { useState, useCallback, useRef, useEffect } from 'react';
+ import { useTranslation } from 'react-i18next';
+ import { registerEditorCommand } from '../../lib/editorCommands';
+@@ -2024,7 +2025,7 @@
+             />
+ 
+             {/* Library Manager — always visible with label */}
+-            <button
++            {!PL_MODE && <button
+               onClick={() => {
+                 trackOpenLibraryManager();
+                 setLibManagerOpen(true);
+@@ -2047,7 +2048,7 @@
+                 <path d="M12 22V12" />
+               </svg>
+               <span className="tb-libraries-label">{t('editor.toolbar.libraries.label')}</span>
+-            </button>
++            </button>}
+ 
+             {/* Import / Export moved to the File menu in the header — the
+                 hidden input above stays because the File-menu command
+@@ -2094,7 +2095,7 @@
+       )}
+ 
+       {/* Missing library hint */}
+-      {missingLibHint && (
++      {!PL_MODE && missingLibHint && (
+         <div className="tb-lib-hint">
+           <svg
+             width="16"
+@@ -2131,7 +2132,7 @@
+         </div>
+       )}
+ 
+-      <LibraryManagerModal isOpen={libManagerOpen} onClose={() => setLibManagerOpen(false)} />
++      {!PL_MODE && <LibraryManagerModal isOpen={libManagerOpen} onClose={() => setLibManagerOpen(false)} />}
+       <InstallLibrariesModal
+         isOpen={installModalOpen}
+         onClose={() => setInstallModalOpen(false)}
+diff --git a/frontend/src/components/editor/FileExplorer.tsx b/frontend/src/components/editor/FileExplorer.tsx
+--- a/frontend/src/components/editor/FileExplorer.tsx
++++ b/frontend/src/components/editor/FileExplorer.tsx
+@@ -1,3 +1,4 @@
++import { PL_MODE } from '../../pl/config';
+ import React, { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react';
+ import { useTranslation } from 'react-i18next';
+ import type { TFunction } from 'i18next';
+@@ -427,9 +428,11 @@
+   // the change event still fires when the user picks the same file twice.
+   const fileInputRef = useRef<HTMLInputElement | null>(null);
+   const handleOpenProjectClick = useCallback(() => {
++    if (PL_MODE) return;
+     fileInputRef.current?.click();
+   }, []);
+   const handleProjectFilePicked = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
++    if (PL_MODE) return;
+     const file = e.target.files?.[0];
+     // Reset so picking the SAME file again later still fires onchange.
+     e.target.value = '';
+@@ -756,12 +759,14 @@
+   );
+ 
+   const handleContextMenu = (e: React.MouseEvent, fileId: string, boardGroupId: string) => {
++    if (PL_MODE) return;
+     e.preventDefault();
+     e.stopPropagation();
+     setContextMenu({ fileId, boardGroupId, x: e.clientX, y: e.clientY });
+   };
+ 
+   const startRename = (fileId: string, groupId: string) => {
++    if (PL_MODE) return;
+     const files = fileGroups[groupId] ?? [];
+     const file = files.find((f) => f.id === fileId);
+     if (!file) return;
+@@ -812,6 +817,7 @@
+   }, [handleOpenProjectClick]);
+ 
+   const startCreateFile = (boardId: string, groupId: string, parentPath = '') => {
++    if (PL_MODE) return;
+     // Switch to this board first so createFile targets the right group
+     switchToBoard(boardId, groupId);
+     setCreatingInGroup(groupId);
+@@ -822,6 +828,7 @@
+   };
+ 
+   const startCreateFolder = (boardId: string, groupId: string, parentPath = '') => {
++    if (PL_MODE) return;
+     switchToBoard(boardId, groupId);
+     setCreatingFolderInGroup(groupId);
+     setCreatingFolderParent(parentPath);
+diff --git a/frontend/src/components/simulator/PartInspectorDialog.tsx b/frontend/src/components/simulator/PartInspectorDialog.tsx
+--- a/frontend/src/components/simulator/PartInspectorDialog.tsx
++++ b/frontend/src/components/simulator/PartInspectorDialog.tsx
+@@ -1,3 +1,4 @@
++import { PL_MODE } from '../../pl/config';
+ /**
+  * Part Inspector — the right-click dialog for canvas components.
+  *
+@@ -896,7 +897,7 @@
+           {/* Buy lives here, right-aligned, so it is reachable from BOTH
+               tabs — it used to sit at the end of the datasheet body, which
+               meant scrolling to the bottom of the right tab to find it. */}
+-          {buyHref && (
++          {!PL_MODE && buyHref && (
+             <div className="pid-actions-right">
+               <a
+                 className="pid-buy-button"
+diff --git a/frontend/src/components/simulator/SimulatorCanvas.tsx b/frontend/src/components/simulator/SimulatorCanvas.tsx
+--- a/frontend/src/components/simulator/SimulatorCanvas.tsx
++++ b/frontend/src/components/simulator/SimulatorCanvas.tsx
+@@ -1,3 +1,4 @@
++import { PL_MODE } from '../../pl/config';
+ import {
+   useSimulatorStore,
+   getEsp32Bridge,
+@@ -3759,7 +3760,7 @@
+               // boards — it knows the wire count; a second ask here would stack.
+               skipDeleteConfirm
+               wireInProgress={Boolean(wireInProgress)}
+-              readOnly={interactionRunning}
++              readOnly={interactionRunning || PL_MODE}
+               onClose={() => setBoardContextMenu(null)}
+               onPropertyChange={(id, propName, value) => {
+                 // The board dialog's only editable "property" is the SD
+@@ -3831,7 +3832,7 @@
+         isOpen={showComponentPicker}
+         onClose={() => setShowComponentPicker(false)}
+         onSelectComponent={handleSelectComponent}
+-        onSelectBoard={(kind: BoardKind) => {
++        onSelectBoard={PL_MODE ? undefined : (kind: BoardKind) => {
+           // Pro gate, 'add' action: the overlay decides whether a non-paid
+           // web user may PLACE this board (it lets the run gate do the
+           // selling, so this normally allows). OSS / desktop / paid -> allow.
+diff --git a/frontend/src/lib/editorCommands.ts b/frontend/src/lib/editorCommands.ts
+--- a/frontend/src/lib/editorCommands.ts
++++ b/frontend/src/lib/editorCommands.ts
+@@ -1,3 +1,4 @@
++import { workspaceCommandAllowed } from '../pl/config';
+ /**
+  * editorCommands — a tiny id → handler registry for the editor menu bar.
+  *
+@@ -65,6 +66,7 @@
+ const listeners = new Set<() => void>();
+ 
+ export function registerEditorCommand(id: EditorCommandId, run: () => void): () => void {
++  if (!workspaceCommandAllowed(id)) return () => {};
+   handlers.set(id, run);
+   version++;
+   for (const l of listeners) l();
+diff --git a/frontend/src/pages/EditorPage.tsx b/frontend/src/pages/EditorPage.tsx
+--- a/frontend/src/pages/EditorPage.tsx
++++ b/frontend/src/pages/EditorPage.tsx
+@@ -1,3 +1,4 @@
++import { PL_MODE } from '../pl/config';
+ /**
+  * Editor Page — main editor + simulator with resizable panels
+  */
+@@ -116,7 +117,7 @@
+   // user who was building something and signed in lands back on their circuit
+   // (not the empty starter board). One-shot; see utils/workspaceDraft.
+   useEffect(() => {
+-    restoreStashedWorkspace();
++    if (!PL_MODE) restoreStashedWorkspace();
+   }, []);
+ 
+   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
+@@ -137,7 +138,7 @@
+   // The 2.5s bound applies only while the news decision is pending, so a
+   // dead feed can't hold the dialog hostage — see lib/newsGate.ts.
+   useEffect(() => {
+-    if (starterDialogShownThisLoad) return;
++    if (PL_MODE || starterDialogShownThisLoad) return;
+     const locale = getLocaleFromPath(window.location.pathname);
+     // /editor is prerendered, so a fresh load arrives as /editor/ (nginx
+     // adds the slash); client-side navigation lands on /editor. Both count.
+@@ -171,6 +172,7 @@
+   // follow-up (round 2) with a stronger message; clicking the repo link at
+   // any time opts them out permanently.
+   useEffect(() => {
++    if (PL_MODE) return;
+     const STAR_KEY = 'velxio_star_prompted';
+     const STAR_KEY_V2 = 'velxio_star_prompted_v2';
+     const STAR_CLICKED_KEY = 'velxio_star_clicked';
+@@ -258,6 +260,7 @@
+   // from here into the dialog's selection handler — Cancel/ESC now leaves
+   // the current workspace untouched, so the old confirm dialog is gone.
+   const handleNewClick = useCallback(() => {
++    if (PL_MODE) return;
+     setShowNewProjectDialog(true);
+   }, []);
+ 
+@@ -558,7 +561,7 @@
+   return (
+     <div className="app">
+       <AppHeader
+-        editorMenu={!isMobile ? <EditorMenuBar /> : undefined}
++        editorMenu={!isMobile || PL_MODE ? <EditorMenuBar /> : undefined}
+         editorToolbar={unifiedToolbar}
+       />
+ 
+@@ -808,11 +811,11 @@
+           round={starRound}
+         />
+       )}
+-      <NewsAnnouncer />
+-      <NewProjectDialog
++      {!PL_MODE && <NewsAnnouncer />}
++      {!PL_MODE && <NewProjectDialog
+         isOpen={showNewProjectDialog}
+         onClose={() => setShowNewProjectDialog(false)}
+-      />
++      />}
+       {/* Slot reserved for the private pro overlay (e.g. agent chat panel).
+           Self-hosted builds without an overlay see nothing here. */}
+       <div data-velxio-slot="agent-chat" />
+diff --git a/frontend/src/services/metricsService.ts b/frontend/src/services/metricsService.ts
+--- a/frontend/src/services/metricsService.ts
++++ b/frontend/src/services/metricsService.ts
+@@ -1,3 +1,4 @@
++import { PL_MODE } from '../pl/config';
+ import axios from 'axios';
+ import { getApiBase } from '../lib/apiBase';
+ 
+@@ -22,6 +23,7 @@
+ }
+ 
+ export async function reportRunEvent(payload: RunEventPayload): Promise<void> {
++  if (PL_MODE) return;
+   // Best-effort fire-and-forget.
+   try {
+     await api.post('/metrics/run', payload);
+diff --git a/frontend/src/store/useEditorStore.ts b/frontend/src/store/useEditorStore.ts
+--- a/frontend/src/store/useEditorStore.ts
++++ b/frontend/src/store/useEditorStore.ts
+@@ -1,3 +1,4 @@
++import { PL_MODE } from '../pl/config';
+ import { create } from 'zustand';
+ import { generateUUID } from '../utils/uuid';
+ import { isPiBoardKind } from '../types/board';
+@@ -24,7 +25,7 @@
+     .join('/');
+ }
+ 
+-const DEFAULT_INO_CONTENT = `// Arduino Blink Example
++const DEFAULT_INO_CONTENT = PL_MODE ? '' : `// Arduino Blink Example
+ void setup() {
+   pinMode(LED_BUILTIN, OUTPUT);
+ }
+@@ -36,7 +37,7 @@
+   delay(1000);
+ }`;
+ 
+-const DEFAULT_MICROPYTHON_CONTENT = `# MicroPython Blink for Raspberry Pi Pico
++const DEFAULT_MICROPYTHON_CONTENT = PL_MODE ? '' : `# MicroPython Blink for Raspberry Pi Pico
+ from machine import Pin
+ import time
+ 
+@@ -51,7 +52,7 @@
+ // same generation the compile pipeline and the JS engines are validated
+ // against), so Pin.toggle() and friends exist now; this seed just stays on
+ // the lowest-common API. History: #122 (v1.20 had no Pin.toggle).
+-const DEFAULT_ESP32_MICROPYTHON_CONTENT = `# MicroPython Blink for ESP32
++const DEFAULT_ESP32_MICROPYTHON_CONTENT = PL_MODE ? '' : `# MicroPython Blink for ESP32
+ from machine import Pin
+ import time
+ 
+@@ -67,7 +68,7 @@
+ // Pure ESP-IDF mode (issue #139): the user's own app_main(), compiled by the
+ // backend's ESP-IDF toolchain WITHOUT the arduino-esp32 component. GPIO 2 is
+ // the built-in LED on most ESP32 dev boards.
+-const DEFAULT_ESPIDF_CONTENT = `// ESP-IDF Blink Example
++const DEFAULT_ESPIDF_CONTENT = PL_MODE ? '' : `// ESP-IDF Blink Example
+ #include <stdio.h>
+ #include "freertos/FreeRTOS.h"
+ #include "freertos/task.h"
+@@ -89,7 +90,7 @@
+ }
+ `;
+ 
+-const DEFAULT_PY_CONTENT = `import RPi.GPIO as GPIO
++const DEFAULT_PY_CONTENT = PL_MODE ? '' : `import RPi.GPIO as GPIO
+ import time
+ 
+ LED_PIN = 17

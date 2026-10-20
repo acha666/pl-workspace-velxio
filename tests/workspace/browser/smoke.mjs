@@ -6,7 +6,8 @@ import { chromium, expect } from '@playwright/test';
 
 const template = process.argv[2];
 assert.ok(['blink', 'sevenSegment'].includes(template), 'Specify blink or sevenSegment');
-const source = await readFile(`/repo/tests/fixtures/${template}.ino`, 'utf8');
+// A working sketch for the template, typed into the editor and run.
+const source = await readFile(new URL(`fixtures/${template}.ino`, import.meta.url), 'utf8');
 const base = '/pl/workspace/test/container/';
 const origin = 'http://127.0.0.1:8081';
 const api = `${origin}${base}api/pl-workspace`;
@@ -67,11 +68,16 @@ context.on('response', (response) => {
   }
 });
 
+// The file explorer's save icon is the workspace's only save control and status.
+const saveIcon = (page) => page.locator('.file-explorer-save-btn[class*="is-"]');
+
 async function openEditor(page) {
   await page.goto(`${origin}${base}`);
   await expect(page.getByTestId('pl-save-status')).toHaveText('Saved to workspace', {
     timeout: 30_000,
   });
+  await expect(saveIcon(page)).toHaveClass(/\bis-saved\b/);
+  await expect(page.locator('.pl-save-text')).toHaveText(/^Saved( .+)?$/);
   await expect(page.locator('.monaco-editor .view-lines').first()).toBeVisible({ timeout: 30_000 });
 }
 
@@ -79,6 +85,14 @@ async function edit(page, code, expectedStatus = 200) {
   const saved = page.waitForResponse(
     (response) => response.url() === api && response.request().method() === 'PUT',
   );
+  // Record every state the save icon passes through during the autosave.
+  await saveIcon(page).evaluate((icon) => {
+    window.saveIconClasses = [icon.className];
+    new MutationObserver(() => window.saveIconClasses.push(icon.className)).observe(icon, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+  });
   // Exercise Monaco's real change event without browser IME/auto-indent effects.
   await page.evaluate((value) => {
     const model = window.monaco.editor.getModels().find((model) => model.getLanguageId() === 'cpp');
@@ -89,6 +103,18 @@ async function edit(page, code, expectedStatus = 200) {
   await expect(page.getByTestId('pl-save-status')).toHaveText(
     expectedStatus === 200 ? 'Saved to workspace' : 'Save failed',
   );
+  if (expectedStatus === 200) {
+    // A prompt autosave must not make the icon flash while the student types.
+    const classes = await page.evaluate(() => window.saveIconClasses);
+    assert.ok(
+      classes.every((className) => /\bis-saved\b/.test(className)),
+      `The save icon changed during autosave: ${classes.join(', ')}`,
+    );
+    await expect(page.locator('.pl-save-text')).toHaveText(/^Saved .+$/);
+  } else {
+    await expect(saveIcon(page)).toHaveClass(/\bis-error\b/);
+    await expect(page.locator('.pl-save-text')).toHaveText('Not saved');
+  }
 }
 
 async function savedCode() {
@@ -101,6 +127,16 @@ async function savedCode() {
 try {
   const page = await context.newPage();
   await openEditor(page);
+  await expect(page.locator('.pl-workspace-status')).toHaveCount(0);
+
+  // The AGPL source offer lives in the Help menu.
+  await page.getByRole('button', { name: 'Help', exact: true }).click();
+  const sourceLink = page.getByRole('menuitem', { name: 'Source & licenses' });
+  const sourceArchive = await context.request.get(await sourceLink.getAttribute('href'));
+  assert.equal(sourceArchive.status(), 200);
+  assert.deepEqual([...(await sourceArchive.body()).subarray(0, 2)], [0x1f, 0x8b]);
+  await page.keyboard.press('Escape');
+
   await edit(page, source);
   assert.equal(await savedCode(), source);
   await page.reload();

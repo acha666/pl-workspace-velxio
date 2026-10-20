@@ -71,7 +71,8 @@ def parse(data):
     projects = [file for file in submitted_files if file.get("name") == "project.vlx"]
     if len(projects) != 1:
         data["format_errors"].setdefault("_files", []).append(
-            "Open the workspace, wait for Saved to workspace, then click Save on PrairieLearn."
+            "Open the workspace, wait until the save icon above its file list is green, "
+            "then click Save on PrairieLearn."
         )
         return
 
@@ -85,3 +86,7 @@ def parse(data):
         return
 
     pl.add_submitted_file(data, "sketch.ino", raw_contents=source)
+    # Present the extracted sketch before the project snapshot.
+    data["submitted_answers"]["_files"].sort(
+        key=lambda file: file.get("name") != "sketch.ino"
+    )

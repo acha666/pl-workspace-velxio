@@ -1,14 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { EditorPage } from '../pages/EditorPage';
 import { triggerDownloadVlx } from '../utils/vlxFile';
-import { assetUrl } from './config';
-import {
-  initializeWorkspace,
-  subscribeWorkspace,
-  workspaceState,
-  workspaceHasConflict,
-  flushWorkspace,
-} from './workspace';
+import { initializeWorkspace, subscribeWorkspace, workspaceState } from './workspace';
 import './workspace.css';
 
 export function WorkspacePage() {
@@ -30,34 +23,19 @@ export function WorkspacePage() {
         {loadError && <button onClick={() => window.location.reload()}>Retry</button>}
       </main>
     );
+  // The file explorer's save icon shows this state; announce the same changes.
   const label = {
     idle: 'Loading…',
+    saved: 'Saved to workspace',
     dirty: 'Unsaved changes',
     saving: 'Saving…',
-    saved: 'Saved to workspace',
     error: 'Save failed',
   }[state.status];
   return (
     <div className="pl-workspace">
-      <div className="pl-workspace-status">
-        <span role="status" data-testid="pl-save-status">
-          {label}
-        </span>
-        <button
-          onClick={() => {
-            void flushWorkspace().catch(() => {});
-          }}
-          disabled={state.status === 'saving' || workspaceHasConflict()}
-        >
-          Save now
-        </button>
-        <span className="pl-workspace-instruction">
-          Wait for “Saved to workspace”, then return to PrairieLearn to submit.
-        </span>
-        <a href={assetUrl('pl-adapter-source.tar.gz')} download>
-          Source &amp; licenses
-        </a>
-      </div>
+      <span className="pl-visually-hidden" role="status" data-testid="pl-save-status">
+        {label}
+      </span>
       {state.errorMessage && (
         <div className="pl-workspace-error" role="alert">
           {state.errorMessage}{' '}

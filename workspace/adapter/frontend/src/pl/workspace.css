@@ -8,21 +8,6 @@
   flex: 1;
   min-height: 0;
 }
-.pl-workspace-status {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.4rem 0.8rem;
-  font-size: 12px;
-  border-bottom: 1px solid var(--color-border-default);
-  background: var(--color-bg-header);
-}
-.pl-workspace-status [role='status'] {
-  font-weight: 650;
-  min-width: 9rem;
-}
-.pl-workspace-status button,
 .pl-workspace-error button,
 .pl-workspace-loading button {
   padding: 0.25rem 0.6rem;
@@ -32,16 +17,13 @@
   border-radius: 4px;
   cursor: pointer;
 }
-.pl-workspace-status button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-.pl-workspace-status a {
-  margin-left: auto;
-  color: inherit;
-}
-.pl-workspace-instruction {
-  color: var(--color-fg-muted);
+.pl-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .pl-workspace-error {
   padding: 0.65rem 0.8rem;
@@ -64,5 +46,37 @@
 .pl-workspace .fe-board-actions-row > button,
 .pl-workspace .fe-folder-actions,
 .pl-workspace [data-velxio-slot='agent-chat'] {
+  display: none;
+}
+/* The save icon is the only save control and status. Autosave runs shortly
+   after edits pause, so the icon changes only when a save is overdue or
+   fails, and never pulses. */
+.pl-workspace .file-explorer-save-btn {
+  transition: color 0.3s ease;
+}
+.pl-workspace .file-explorer-save-btn.is-dirty,
+.pl-workspace .file-explorer-save-btn.is-saving {
+  color: var(--wb-11);
+  animation: none;
+}
+.pl-workspace .file-explorer-header-actions {
+  min-width: 0;
+}
+.pl-save-text {
+  min-width: 0;
+  margin-left: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-fg-muted);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.file-explorer-save-btn.is-error + .pl-save-text {
+  color: var(--color-feedback-error);
+}
+/* Upstream marks a file modified until a manual save, which never happens here. */
+.pl-workspace .file-explorer-dot {
   display: none;
 }

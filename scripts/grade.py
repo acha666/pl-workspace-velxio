@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Grade sketches with a question's tests/test.py, laid out as PrairieLearn does.
 
-With no sketches, grade every case in QUESTION/grader-cases and compare the
-scores with grader-cases/expected.json ({"case.ino": score, ...}; null means
-the submission must be ungradable). Runs the grader image under the
-production grader limits: no network, 0.9 CPU and 2 GiB of memory.
+With --cases DIR instead of sketches, grade every case listed in
+DIR/expected.json ({"case.ino": score, ...}; null means the submission must be
+ungradable) and compare the scores. Runs the grader image under the production
+grader limits: no network, 0.9 CPU and 2 GiB of memory.
 """
 
 import argparse
@@ -80,10 +80,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("question", type=Path, help="question directory")
     parser.add_argument("sketches", type=Path, nargs="*", help="sketches to grade")
+    parser.add_argument(
+        "--cases", type=Path, help="directory of sketches and their expected.json"
+    )
     parser.add_argument("--image", help="grader image (default: from info.json)")
     parser.add_argument("--name", default="sketch.ino", help="submitted file name")
     parser.add_argument("--verbose", action="store_true", help="print full results")
     args = parser.parse_args()
+    if bool(args.sketches) == bool(args.cases):
+        parser.error("give either sketches or --cases")
     question = args.question.resolve()
     image = (
         args.image
@@ -100,12 +105,10 @@ def main():
                 print(json.dumps(results, indent=2) if results else log)
         return 0
 
-    expected = json.loads((question / "grader-cases/expected.json").read_text())
+    expected = json.loads((args.cases / "expected.json").read_text())
     failures = 0
     for case, score in expected.items():
-        results, log = grade(
-            question, image, question / "grader-cases" / case, args.name
-        )
+        results, log = grade(question, image, args.cases / case, args.name)
         if score is None:
             passed = results is not None and results["gradable"] is False
         else:

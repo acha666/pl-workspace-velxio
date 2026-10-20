@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 QUESTIONS = ROOT / "course/questions/arduino"
 
 
@@ -58,10 +58,12 @@ class SubmissionTests(unittest.TestCase):
         data = self.submit([project_file, {"name": "sketch.ino", "contents": "forged"}])
         self.assertEqual(data["format_errors"], {})
         files = data["submitted_answers"]["_files"]
-        self.assertEqual(files[0], project_file)
-        self.assertEqual(base64.b64decode(files[1]["contents"]).decode(), source)
+        self.assertEqual([file["name"] for file in files], ["sketch.ino", "project.vlx"])
+        self.assertEqual(base64.b64decode(files[0]["contents"]).decode(), source)
+        self.assertEqual(files[1], project_file)
         velxio.parse(data)
-        self.assertEqual(len(data["submitted_answers"]["_files"]), 2)
+        files = data["submitted_answers"]["_files"]
+        self.assertEqual([file["name"] for file in files], ["sketch.ino", "project.vlx"])
 
     def test_missing_duplicate_and_invalid_files_fail_without_trusting_preview(self):
         project_file = {"name": "project.vlx", "contents": encode(self.project)}
@@ -175,16 +177,6 @@ class TemplateTests(unittest.TestCase):
                     "python3 /grade/tests/test.py",
                 )
                 self.assertTrue((question / "tests/test.py").is_file())
-                expected = json.loads(
-                    (question / "grader-cases/expected.json").read_text()
-                )
-                self.assertEqual(expected["reference.ino"], 1.0)
-                self.assertEqual(
-                    sorted(expected),
-                    sorted(
-                        path.name for path in (question / "grader-cases").glob("*.ino")
-                    ),
-                )
 
     def test_seven_segment_connections_have_individual_current_limiting_resistors(self):
         project = json.loads(

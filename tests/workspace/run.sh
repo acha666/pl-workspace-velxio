@@ -1,6 +1,9 @@
 #!/bin/bash
+# Test a built workspace image with each template: the API smoke test inside
+# the container, Chromium through a PrairieLearn-style proxy, persistence
+# across container replacement and clean shutdown.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 image=${1:-pl-workspace-velxio:test}
 container=
 volume=
@@ -21,23 +24,22 @@ create_workspace() {
         -e WORKSPACE_BASE_URL=/pl/workspace/test/container/ "$image"
 }
 
-docker build -t pl-workspace-velxio:browser-tests tests/browser
+docker build -t pl-workspace-velxio:browser-tests tests/workspace/browser
 for template in blink sevenSegment; do
     volume=$(docker volume create)
     container=$(create_workspace)
     docker cp "course/questions/arduino/$template/workspace/project.vlx" "$container:/workspace/project.vlx"
-    docker cp scripts/smoke.py "$container:/tmp/smoke.py"
+    docker cp tests/workspace/smoke.py "$container:/tmp/smoke.py"
     docker start "$container" >/dev/null
     docker exec "$container" python /tmp/smoke.py
     docker run --rm --init --network "container:$container" --shm-size=512m \
-        --mount "type=bind,src=$PWD,dst=/repo,readonly" \
         pl-workspace-velxio:browser-tests node smoke.mjs "$template"
     before=$(docker exec "$container" sha256sum /workspace/project.vlx)
     docker stop --time 5 "$container" >/dev/null
     test "$(docker inspect --format '{{.State.ExitCode}}' "$container")" = 143
     docker rm "$container" >/dev/null
     container=$(create_workspace)
-    docker cp scripts/smoke.py "$container:/tmp/smoke.py"
+    docker cp tests/workspace/smoke.py "$container:/tmp/smoke.py"
     docker start "$container" >/dev/null
     after=$(docker exec "$container" sha256sum /workspace/project.vlx)
     test "$before" = "$after"

@@ -1,0 +1,16 @@
+diff --git a/frontend/src/simulation/parts/ChipParts.ts b/frontend/src/simulation/parts/ChipParts.ts
+--- a/frontend/src/simulation/parts/ChipParts.ts
++++ b/frontend/src/simulation/parts/ChipParts.ts
+@@ -379,6 +379,12 @@
+     const digitPinNames: string[] = s.digits === 1
+       ? ['COM.1', 'COM.2']                                       // 1-digit: both COM pins map to digit 0
+       : Array.from({ length: s.digits }, (_, i) => `DIG${i + 1}`); // 2/3/4-digit: DIG1..DIGn
++    // A single common-cathode display tied to GND is always enabled.
++    // Ignore both copies of COM: an unwired pin still has a FLOATING resolver,
++    // which would otherwise disable the same digit after reading its grounded pin.
++    if (s.digits === 1 && digitPinNames.some((pin) => getArduinoPinHelper(pin) === -1)) {
++      digitPinNames.length = 0;
++    }
+     let digitPinsWired = 0;
+     for (let d = 0; d < digitPinNames.length; d++) {
+       const pinName = digitPinNames[d];

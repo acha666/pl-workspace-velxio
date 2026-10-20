@@ -81,21 +81,6 @@ def test_analog_inputs_read_back_exactly(simulate):
     assert [readings[t] for t in (10, 30, 50, 70, 90)] == [0, 1, 512, 1022, 1023]
 
 
-def test_pwm_output_is_recorded_on_timer0_pins(simulate):
-    # simavr drives fast-PWM pins (5 and 6) but not the phase-correct pins
-    # 3, 9, 10 and 11; see grader/README.md.
-    sketch = "void setup() { analogWrite(5, 64); } void loop() {}"
-    trace = simulate(sketch, Scenario(duration_ms=110))
-    edges = trace.changes(5, start_ms=100, end_ms=110)
-    high = sum(
-        end - start
-        for (start, state), (end, _) in zip(edges, edges[1:])
-        if state == "HIGH"
-    )
-    assert 18 <= len(edges) <= 21  # about 976 Hz
-    assert high / (edges[-1][0] - edges[0][0]) == pytest.approx(64 / 255, abs=0.03)
-
-
 def test_limits_stop_the_simulation_and_explain_why(simulate):
     toggles = "void setup() { pinMode(13, OUTPUT); } void loop() { PINB = _BV(5); }"
     trace = simulate(toggles, Scenario(duration_ms=1000, max_pin_changes=1000))

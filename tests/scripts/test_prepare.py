@@ -11,7 +11,7 @@ import tarfile
 import pytest
 
 
-PREPARE = Path(__file__).resolve().parents[1] / "scripts/prepare.py"
+PREPARE = Path(__file__).resolve().parents[2] / "scripts/prepare.py"
 spec = importlib.util.spec_from_file_location("prepare", PREPARE)
 prepare = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(prepare)
@@ -58,7 +58,6 @@ def project(tmp_path, monkeypatch):
         "workspace/patches",
         "workspace/adapter/frontend",
         "workspace/dependencies",
-        "docker",
         "scripts",
         "tests",
         "course",
@@ -73,7 +72,7 @@ def project(tmp_path, monkeypatch):
     (root / "workspace/dependencies/backend-constraints.txt").write_text(
         "fastapi==0.135.1\n"
     )
-    (root / "docker/Dockerfile").write_text(
+    (root / "Dockerfile").write_text(
         "ARG VELXIO_BASE_IMAGE=example/runtime@sha256:123\n"
         "ARG SIMAVR_COMMIT=abc123\n"
         "RUN arduino-cli core install arduino:avr@1.8.6\n"
@@ -147,6 +146,25 @@ def test_nested_checkout_applies_patch_and_distributed_source_rebuilds(
     for name in ["tests", "course", "grader"]:
         assert (output / name / "answer.txt").is_file()
         assert list((rebuilt / name).iterdir()) == []
+
+
+def test_patches_apply_in_name_order(project, monkeypatch):
+    root, upstream = project
+    patches = root / "workspace/patches"
+    (patches / "workspace.patch").rename(patches / "0001-first.patch")
+    (patches / "0002-second.patch").write_text(
+        "diff --git a/frontend/example.txt b/frontend/example.txt\n"
+        "--- a/frontend/example.txt\n"
+        "+++ b/frontend/example.txt\n"
+        "@@ -1 +1 @@\n"
+        "-PrairieLearn patch applied.\n"
+        "+Second patch applied.\n"
+    )
+    output = root / ".build"
+    run_prepare(monkeypatch, upstream, output)
+    assert (
+        output / "upstream/frontend/example.txt"
+    ).read_text() == "Second patch applied.\n"
 
 
 def test_failed_patch_leaves_no_output(project, monkeypatch):

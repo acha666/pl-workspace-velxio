@@ -17,7 +17,6 @@ import time
 import traceback
 
 from .simulation import SimulationStopped, Trace
-from .source import find_calls
 
 GRADE_DIR = Path("/grade")
 WORK_DIR = Path("/tmp/arduinograder")
@@ -224,18 +223,6 @@ class ArduinoGrader:
                 encoding="utf-8", errors="replace"
             )
         return self._source
-
-    def forbid_calls(self, *names):
-        """Stop with a score of zero if the sketch calls any of these functions."""
-        calls = find_calls(self.source, names)
-        if calls:
-            listed = "\n".join(
-                f"    line {call.line}: {call.text}" for call in calls[:3]
-            )
-            names = ", ".join(sorted({f"{call.name}()" for call in calls}))
-            raise StopGrading(
-                f"Your sketch calls {names}, which this question does not allow:\n{listed}"
-            )
 
     def compile(self):
         """Compile the sketch for the Uno and return the firmware path.

@@ -1,19 +1,26 @@
-"""Course questions score their grader cases as recorded in expected.json."""
+"""Course question tests score sketches in cases/ as recorded in expected.json.
+
+cases/<path under questions/>/ holds temporary regression sketches for the
+bundled templates. They test the grader and are not part of a question.
+"""
 
 import importlib.util
 import itertools
 import json
-import os
 from pathlib import Path
 import shutil
 
 import pytest
 
-COURSE = Path(os.environ.get("COURSE_DIR", "/opt/course"))
+ROOT = Path(__file__).resolve().parents[2]
+COURSE = ROOT / "course"
+CASE_DIR = Path(__file__).parent / "cases"
+# The autograded template that the grader behaviour tests submit to.
+EXAMPLE = "arduino/blinkWithoutDelay"
 CASES = sorted(
-    (question, case, score)
-    for expected in COURSE.glob("questions/**/grader-cases/expected.json")
-    for question in [expected.parent.parent]
+    (COURSE / "questions" / cases.relative_to(CASE_DIR), cases / case, score)
+    for expected in CASE_DIR.glob("**/expected.json")
+    for cases in [expected.parent]
     for case, score in json.loads(expected.read_text()).items()
 )
 _runs = itertools.count()
@@ -37,15 +44,22 @@ def grade(tmp_path, question, sketch, name="sketch.ino", data='{"params": {}}'):
     return json.loads((grade_dir / "results/results.json").read_text())
 
 
-def test_course_questions_have_grader_cases():
-    assert CASES, f"No grader cases found under {COURSE}"
+def test_grader_cases_list_their_sketches_for_existing_questions():
+    assert CASES, f"No grader cases found under {CASE_DIR}"
+    for expected in CASE_DIR.glob("**/expected.json"):
+        cases = expected.parent
+        assert sorted(json.loads(expected.read_text())) == sorted(
+            path.name for path in cases.glob("*.ino")
+        )
+        question = COURSE / "questions" / cases.relative_to(CASE_DIR)
+        assert (question / "tests/test.py").is_file(), question
 
 
 @pytest.mark.parametrize(
-    "question,case,score", CASES, ids=[f"{q.name}/{c}" for q, c, _ in CASES]
+    "question,case,score", CASES, ids=[f"{q.name}/{c.name}" for q, c, _ in CASES]
 )
 def test_grader_case(tmp_path, question, case, score):
-    results = grade(tmp_path, question, (question / "grader-cases" / case).read_text())
+    results = grade(tmp_path, question, case.read_text())
     if score is None:
         assert results["gradable"] is False
     else:
@@ -54,7 +68,7 @@ def test_grader_case(tmp_path, question, case, score):
 
 
 def test_sketch_cannot_read_grading_files(tmp_path):
-    question = COURSE / "questions/arduino/blinkWithoutDelay"
+    question = COURSE / "questions" / EXAMPLE
     secret = "SECRET-EXPECTED-OUTPUT"
     sketch = (
         '#include "/grade/tests/secret.h"\n'
@@ -73,7 +87,7 @@ def test_sketch_cannot_read_grading_files(tmp_path):
 
 
 def test_compile_errors_name_the_submitted_file(tmp_path):
-    question = COURSE / "questions/arduino/blinkWithoutDelay"
+    question = COURSE / "questions" / EXAMPLE
     results = grade(
         tmp_path, question, "void setup() {}\nvoid loop() { oops }\n", "lab.ino"
     )
@@ -84,15 +98,15 @@ def test_compile_errors_name_the_submitted_file(tmp_path):
 
 
 def test_grader_failures_still_write_ungradable_results(tmp_path):
-    question = COURSE / "questions/arduino/blinkWithoutDelay"
-    reference = (question / "grader-cases/reference.ino").read_text()
+    question = COURSE / "questions" / EXAMPLE
+    reference = (CASE_DIR / EXAMPLE / "reference.ino").read_text()
     results = grade(tmp_path, question, reference, data="not json")
     assert results["gradable"] is False
     assert "grader failed unexpectedly" in results["message"]
 
 
 def test_missing_sketch_is_not_counted(tmp_path):
-    question = COURSE / "questions/arduino/blinkWithoutDelay"
+    question = COURSE / "questions" / EXAMPLE
     results = grade(tmp_path, question, "", "notes.txt")
     assert results["gradable"] is False
     assert "No submission was found" in results["message"]

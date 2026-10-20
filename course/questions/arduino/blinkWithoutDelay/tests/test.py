@@ -1,6 +1,7 @@
 """Blink pin 13 with millis(): on for 500 ms, then off for 500 ms."""
 
 import arduinograder as ag
+from arduinograder.extras import forbid_calls
 
 LED = 13
 HALF_PERIOD_MS = 500
@@ -9,7 +10,7 @@ TOLERANCE_MS = 20
 
 class QuestionGrader(ag.ArduinoGrader):
     def tests(self):
-        self.forbid_calls("delay")
+        forbid_calls(self.source, "delay")
         firmware = self.compile()
         trace = self.simulate(firmware, ag.Scenario(duration_ms=2600))
 

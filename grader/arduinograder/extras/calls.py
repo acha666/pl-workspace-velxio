@@ -5,6 +5,8 @@ from collections import namedtuple
 import tree_sitter_cpp
 from tree_sitter import Language, Parser
 
+from ..grader import StopGrading
+
 Call = namedtuple("Call", "name line text")
 _PARSER = Parser(Language(tree_sitter_cpp.language()))
 
@@ -34,3 +36,14 @@ def find_calls(source, names):
                     calls.append(Call(name, line + 1, text))
         stack.extend(reversed(node.children))
     return sorted(calls, key=lambda call: call.line)
+
+
+def forbid_calls(source, *names):
+    """Stop grading with a score of zero if the source calls any of these functions."""
+    calls = find_calls(source, names)
+    if calls:
+        listed = "\n".join(f"    line {call.line}: {call.text}" for call in calls[:3])
+        names = ", ".join(sorted({f"{call.name}()" for call in calls}))
+        raise StopGrading(
+            f"Your sketch calls {names}, which this question does not allow:\n{listed}"
+        )

@@ -64,7 +64,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends git \
 RUN pip install --no-cache-dir pytest==8.3.5
 COPY scripts/prepare.py /scripts/prepare.py
 COPY upstream/backend/tests/test_pl_workspace.py /tests/test_pl_workspace.py
-COPY tests/ /tests/
+COPY tests/scripts/ /tests/scripts/
+COPY tests/course/ /tests/course/
 COPY course/ /course/
 ENV PYTHONPATH=/app
 RUN python -m pytest -q /tests
@@ -122,6 +123,6 @@ ENTRYPOINT ["python3", "/grade/tests/test.py"]
 
 FROM grader AS grader-test
 RUN pip install --no-cache-dir pytest==8.3.5
-COPY grader/tests/ /opt/arduinograder/tests/
-COPY course/ /opt/course/
-RUN python -m pytest -q -p no:cacheprovider /opt/arduinograder/tests
+COPY tests/grader/ /tests/grader/
+COPY course/ /course/
+RUN python -m pytest -q -p no:cacheprovider /tests/grader

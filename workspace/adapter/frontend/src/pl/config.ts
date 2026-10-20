@@ -40,3 +40,10 @@ const unavailableCommands = new Set([
 export function workspaceCommandAllowed(id: string): boolean {
   return !PL_MODE || !unavailableCommands.has(id);
 }
+
+/** The Help menu offers only the AGPL source of this build. */
+export function workspaceHelpItems() {
+  return [
+    { kind: 'link' as const, href: assetUrl('pl-adapter-source.tar.gz'), label: 'Source & licenses' },
+  ];
+}

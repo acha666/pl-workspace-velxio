@@ -102,8 +102,18 @@ export function initializeWorkspace(): Promise<void> {
       setState(workspaceState());
       return subscribeWorkspace(() => setState(workspaceState()));
     });
+    // Save as soon as the student leaves for PrairieLearn instead of waiting
+    // for the autosave delay.
+    const saveOnLeave = () => {
+      if (saver?.unsaved) void flushWorkspace().catch(() => {});
+    };
+    window.addEventListener('blur', saveOnLeave);
+    window.addEventListener('pagehide', saveOnLeave);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveOnLeave();
+    });
     window.addEventListener('beforeunload', (event) => {
-      if (saver?.dirty || saver?.state.status === 'saving') {
+      if (saver?.unsaved) {
         event.preventDefault();
         event.returnValue = '';
       }

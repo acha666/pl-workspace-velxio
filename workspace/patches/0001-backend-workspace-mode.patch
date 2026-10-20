@@ -1,0 +1,65 @@
+diff --git a/backend/app/main.py b/backend/app/main.py
+--- a/backend/app/main.py
++++ b/backend/app/main.py
+@@ -1,4 +1,5 @@
+ import logging
++import os
+ import sys
+ import asyncio
+ from contextlib import asynccontextmanager
+@@ -77,7 +78,7 @@
+ # host OS or Tauri version.
+ app.add_middleware(
+     CORSMiddleware,
+-    allow_origins=[
++    allow_origins=[] if os.environ.get("VELXIO_PL_WORKSPACE") == "1" else [
+         "http://localhost:5173",
+         "http://localhost:5174",
+         "http://localhost:5175",
+@@ -191,3 +192,7 @@
+     detail = health_detail()
+     return detail if detail is not None else {"status": "healthy", "overlay": "oss"}
+ 
++
++if os.environ.get("VELXIO_PL_WORKSPACE") == "1":
++    from app.api.routes.pl_workspace import register
++    register(app)
+diff --git a/backend/app/services/arduino_cli.py b/backend/app/services/arduino_cli.py
+--- a/backend/app/services/arduino_cli.py
++++ b/backend/app/services/arduino_cli.py
+@@ -285,8 +285,11 @@
+         # Cached `core list` output; see _is_core_installed. Invalidated
+         # wherever a core is installed so a fresh install is seen immediately.
+         self._installed_cores: str | None = None
+-        self._ensure_board_urls()
+-        self._ensure_core_installed()
++        # Exam images install their pinned toolchain during the image build.
++        # Opening a PrairieLearn workspace must never update or install cores.
++        if os.environ.get("VELXIO_PL_WORKSPACE") != "1":
++            self._ensure_board_urls()
++            self._ensure_core_installed()
+ 
+     def _all_core_urls(self) -> dict[str, str]:
+         """Built-in cores plus whatever an overlay registered."""
+@@ -423,6 +426,12 @@
+         Auto-install the core required by a board FQBN if not present.
+         Returns status dict with install log.
+         """
++        if os.environ.get("VELXIO_PL_WORKSPACE") == "1":
++            supported = fqbn == "arduino:avr:uno"
++            return {
++                "needed": not supported, "installed": supported,
++                "core_id": "arduino:avr", "log": "" if supported else "Only the preinstalled Uno core is available in this workspace.",
++            }
+         core_id = self._core_id_for_fqbn(fqbn)
+         if core_id is None:
+             # Built-in core (arduino:avr) — should already be there
+@@ -934,6 +943,8 @@
+         """
+         List available Arduino boards
+         """
++        if os.environ.get("VELXIO_PL_WORKSPACE") == "1":
++            return [{"name": "Arduino Uno", "fqbn": "arduino:avr:uno"}]
+         try:
+             process = await asyncio.create_subprocess_exec(
+                 self.cli_path,

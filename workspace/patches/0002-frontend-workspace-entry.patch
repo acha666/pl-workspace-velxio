@@ -1,0 +1,70 @@
+diff --git a/frontend/src/App.tsx b/frontend/src/App.tsx
+--- a/frontend/src/App.tsx
++++ b/frontend/src/App.tsx
+@@ -1,3 +1,5 @@
++import { PL_MODE, workspaceBase } from './pl/config';
++import { WorkspacePage } from './pl/WorkspacePage';
+ import { useEffect, type ReactElement } from 'react';
+ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+ import { EditorPage } from './pages/EditorPage';
+@@ -96,6 +98,16 @@
+     document.getElementById('root-seo')?.remove();
+   }, []);
+ 
++  if (PL_MODE) return (
++    <Router basename={workspaceBase()}>
++      <Routes>
++        <Route path="/" element={<WorkspacePage />} />
++        <Route path="*" element={<Navigate to="/" replace />} />
++      </Routes>
++      <MessageDialogHost />
++    </Router>
++  );
++
+   return (
+     <Router>
+       <LocaleSync>
+diff --git a/frontend/vite.config.ts b/frontend/vite.config.ts
+--- a/frontend/vite.config.ts
++++ b/frontend/vite.config.ts
+@@ -1,6 +1,9 @@
+ import { defineConfig } from 'vite'
+ import react from '@vitejs/plugin-react'
+ import path from 'path'
++import { readFileSync } from 'node:fs'
++
++const plWorkspace = process.env.VITE_PL_WORKSPACE === 'true'
+ 
+ // https://vite.dev/config/
+ // avr8js / rp2040js / @wokwi/elements are resolved from npm via package.json.
+@@ -16,7 +19,29 @@
+     : path.resolve(__dirname, 'src/__pro_stub__')
+ 
+ export default defineConfig(({ command }) => ({
+-  plugins: [react()],
++  base: plWorkspace ? './' : '/',
++  plugins: [react(), ...(plWorkspace ? [{
++    name: 'prairielearn-workspace',
++    enforce: 'pre' as const,
++    // Exclude the example source graph, rather than only hiding its links.
++    load(id: string) {
++      if (id === path.resolve(__dirname, 'src/data/examples.ts')) {
++        return readFileSync(path.resolve(__dirname, 'src/pl/emptyExamples.ts'), 'utf8')
++      }
++      if (id === path.resolve(__dirname, 'src/components/customChips/chipExamples.ts')) {
++        return readFileSync(path.resolve(__dirname, 'src/pl/emptyChipExamples.ts'), 'utf8')
++      }
++    },
++    transformIndexHtml: {
++      order: 'pre' as const,
++      handler: () => `<!doctype html>
++<html lang="en"><head><meta charset="UTF-8" />
++<meta name="viewport" content="width=device-width, initial-scale=1.0" />
++<meta name="color-scheme" content="light dark" /><title>Velxio workspace</title>
++<script src="./workspace-config.js"></script></head>
++<body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>`,
++    },
++  }] : [])],
+   resolve: {
+     alias: {
+       '@pro': proOverlayPath,

@@ -1,0 +1,250 @@
+diff --git a/frontend/src/components/velxio-components/Attiny85Element.ts b/frontend/src/components/velxio-components/Attiny85Element.ts
+--- a/frontend/src/components/velxio-components/Attiny85Element.ts
++++ b/frontend/src/components/velxio-components/Attiny85Element.ts
+@@ -30,6 +30,8 @@
+  * wire a real wokwi-led + wokwi-resistor to PB1 like the c3-blink one does.
+  */
+ 
++import { assetUrl } from '../../pl/config';
++
+ const W = 160;
+ const H = 132;
+ const TOP_Y = 6;     // CSS px — y of all four top-edge pin tips
+@@ -82,7 +84,7 @@
+       <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+         <!-- Fritzing ATtiny85 DIP-8 artwork (CC-BY-SA). Scaled to fill
+              the 160x132 box; aspect ratio matches the source 1.211:1. -->
+-        <image href="/component-svgs/attiny85.svg" x="0" y="0" width="${W}" height="${H}" />
++        <image href="${assetUrl('/component-svgs/attiny85.svg')}" x="0" y="0" width="${W}" height="${H}" />
+ 
+         <!-- Pin labels overlaid above/below the connector pads. -->
+         <text class="pin-label power" x="${PIN_X[0]}" y="${TOP_Y - 22}">VCC</text>
+diff --git a/frontend/src/components/velxio-components/Bmp280Element.ts b/frontend/src/components/velxio-components/Bmp280Element.ts
+--- a/frontend/src/components/velxio-components/Bmp280Element.ts
++++ b/frontend/src/components/velxio-components/Bmp280Element.ts
+@@ -21,6 +21,8 @@
+  * (Adafruit BMP180 breakout, variant 3).
+  */
+ 
++import { assetUrl } from '../../pl/config';
++
+ const W = 80;          // CSS px
+ const H = 100;
+ const PIN_Y = 13.6;    // CSS px — y of all four pin tips
+@@ -51,7 +53,7 @@
+       <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+         <!-- Fritzing BMP180 breakout artwork (CC-BY-SA). The asset
+              ships as a public static file so it stays editable separately. -->
+-        <image href="/component-svgs/bmp280.svg" x="0" y="0" width="${W}" height="${H}" />
++        <image href="${assetUrl('/component-svgs/bmp280.svg')}" x="0" y="0" width="${W}" height="${H}" />
+ 
+         <!-- Pin labels overlaid above the connector circles. The Fritzing
+              source has no silkscreen labels on the pins themselves. -->
+diff --git a/frontend/src/components/velxio-components/Esp32Element.ts b/frontend/src/components/velxio-components/Esp32Element.ts
+--- a/frontend/src/components/velxio-components/Esp32Element.ts
++++ b/frontend/src/components/velxio-components/Esp32Element.ts
+@@ -10,19 +10,21 @@
+  *   - esp32-c3     → ESP32-C3 DevKitM-1   (127 × 215 px)
+  */
+ 
++import { assetUrl } from '../../pl/config';
++
+ // Board SVG assets are served from frontend/public/boards/ as static URLs.
+ // No Vite import resolution needed — these resolve at runtime against the
+ // static asset root.
+-const esp32SvgUrl = '/boards/esp32-devkit-v1.svg';
+-const esp32S3SvgUrl = '/boards/esp32-s3.svg';
+-const esp32C3SvgUrl = '/boards/esp32-c3.svg';
+-const esp32DevkitCV4SvgUrl = '/boards/esp32-devkit-c-v4.svg';
+-const esp32CamSvgUrl = '/boards/esp32-cam.svg';
+-const wemosLolin32SvgUrl = '/boards/wemos-lolin32-lite.svg';
+-const xiaoEsp32S3SvgUrl = '/boards/xiao-esp32-s3.svg';
+-const arduinoNanoEsp32SvgUrl = '/boards/arduino-nano-esp32.svg';
+-const xiaoEsp32C3SvgUrl = '/boards/xiao-esp32-c3.svg';
+-const aitewinC3SvgUrl = '/boards/esp32c3-supermini.svg';
++const esp32SvgUrl = assetUrl('/boards/esp32-devkit-v1.svg');
++const esp32S3SvgUrl = assetUrl('/boards/esp32-s3.svg');
++const esp32C3SvgUrl = assetUrl('/boards/esp32-c3.svg');
++const esp32DevkitCV4SvgUrl = assetUrl('/boards/esp32-devkit-c-v4.svg');
++const esp32CamSvgUrl = assetUrl('/boards/esp32-cam.svg');
++const wemosLolin32SvgUrl = assetUrl('/boards/wemos-lolin32-lite.svg');
++const xiaoEsp32S3SvgUrl = assetUrl('/boards/xiao-esp32-s3.svg');
++const arduinoNanoEsp32SvgUrl = assetUrl('/boards/arduino-nano-esp32.svg');
++const xiaoEsp32C3SvgUrl = assetUrl('/boards/xiao-esp32-c3.svg');
++const aitewinC3SvgUrl = assetUrl('/boards/esp32c3-supermini.svg');
+ 
+ // ─── Pin positions (mm × 5 px/mm, from board.json) ───────────────────────────
+ 
+diff --git a/frontend/src/components/velxio-components/MotorDriverElements.ts b/frontend/src/components/velxio-components/MotorDriverElements.ts
+--- a/frontend/src/components/velxio-components/MotorDriverElements.ts
++++ b/frontend/src/components/velxio-components/MotorDriverElements.ts
+@@ -12,6 +12,8 @@
+  * Tag: velxio-a4988  (metadataId 'a4988' via stripBrandPrefix).
+  */
+ 
++import { assetUrl } from '../../pl/config';
++
+ const STYLE = ':host{display:inline-block;line-height:0;position:relative}';
+ 
+ type Pin = { name: string; x: number; y: number; number: number; signals: string[] };
+@@ -25,7 +27,7 @@
+ // Render the real Fritzing A4988 carrier SVG (public/components/a4988.svg).
+ // The board is a uniform 2x8 0.1" header, so the connection points sit on an
+ // even grid aligned to the two pad columns (margins tuned to the artwork).
+-const SVG_URL = '/components/a4988.svg';
++const SVG_URL = assetUrl('/components/a4988.svg');
+ const W = 72;
+ const H = 96;
+ const TOP_FRAC = 0.115;
+diff --git a/frontend/src/components/velxio-components/PiPicoWElement.ts b/frontend/src/components/velxio-components/PiPicoWElement.ts
+--- a/frontend/src/components/velxio-components/PiPicoWElement.ts
++++ b/frontend/src/components/velxio-components/PiPicoWElement.ts
+@@ -4,7 +4,9 @@
+  * Dimensions: 20.9 mm × 52.75 mm → 105 × 264 px (× 5 px/mm)
+  */
+ 
+-const piPicoWSvgUrl = '/boards/pi-pico-w.svg';
++import { assetUrl } from '../../pl/config';
++
++const piPicoWSvgUrl = assetUrl('/boards/pi-pico-w.svg');
+ 
+ // Pi Pico W pins: 1.6 mm → x=8 (left), 19.3 mm → x=97 (right)
+ const PINS_PI_PICO_W = [
+diff --git a/frontend/src/components/velxio-components/Stm32BluePillElement.ts b/frontend/src/components/velxio-components/Stm32BluePillElement.ts
+--- a/frontend/src/components/velxio-components/Stm32BluePillElement.ts
++++ b/frontend/src/components/velxio-components/Stm32BluePillElement.ts
+@@ -20,6 +20,8 @@
+  * the shared Stm32BoardElement class and the CONFIGS table.
+  */
+ 
++import { assetUrl } from '../../pl/config';
++
+ interface PinDef {
+   name: string;
+   x: number;
+@@ -144,20 +146,20 @@
+ 
+ const CONFIGS: Record<string, BoardConfig> = {
+   'stm32-bluepill': {
+-    render: 'svg', svgUrl: '/boards/stm32-bluepill.svg', w: 114, h: 271,
++    render: 'svg', svgUrl: assetUrl('/boards/stm32-bluepill.svg'), w: 114, h: 271,
+     pins: BLUEPILL_PINS, led: { x: 37, y: 228 }, ledActiveLow: true,
+   },
+   'stm32-blackpill': {
+-    render: 'svg', svgUrl: '/boards/stm32-blackpill.svg', w: 103, h: 266,
++    render: 'svg', svgUrl: assetUrl('/boards/stm32-blackpill.svg'), w: 103, h: 266,
+     pins: BLACKPILL_PINS, led: { x: 27, y: 55 }, ledActiveLow: true,
+   },
+   // Pin-compatible variants — reuse the Pill SVGs and pin coordinates.
+   'stm32-bluepill-f103cb': {
+-    render: 'svg', svgUrl: '/boards/stm32-bluepill.svg', w: 114, h: 271,
++    render: 'svg', svgUrl: assetUrl('/boards/stm32-bluepill.svg'), w: 114, h: 271,
+     pins: BLUEPILL_PINS, led: { x: 37, y: 228 }, ledActiveLow: true,
+   },
+   'stm32-blackpill-f401': {
+-    render: 'svg', svgUrl: '/boards/stm32-blackpill.svg', w: 103, h: 266,
++    render: 'svg', svgUrl: assetUrl('/boards/stm32-blackpill.svg'), w: 103, h: 266,
+     pins: BLACKPILL_PINS, led: { x: 27, y: 55 }, ledActiveLow: true,
+   },
+   // Inline boards (F405 / F205 SoCs) — drawn generically.
+diff --git a/frontend/src/main.tsx b/frontend/src/main.tsx
+--- a/frontend/src/main.tsx
++++ b/frontend/src/main.tsx
+@@ -1,3 +1,4 @@
++import { PL_MODE, assetUrl } from './pl/config';
+ import { createRoot } from 'react-dom/client';
+ import { loader } from '@monaco-editor/react';
+ import './index.css';
+@@ -34,7 +35,7 @@
+ import App from './App.tsx';
+ 
+ // Configure monaco-editor for offline use via local static assets
+-const monacoVsPath = `${import.meta.env.BASE_URL}monaco/vs`;
++const monacoVsPath = PL_MODE ? assetUrl('monaco/vs') : `${import.meta.env.BASE_URL}monaco/vs`;
+ loader.config({ paths: { vs: monacoVsPath } });
+ 
+ // Adopt the stored light/dark preference and start listening for it changing
+diff --git a/frontend/src/services/ComponentRegistry.ts b/frontend/src/services/ComponentRegistry.ts
+--- a/frontend/src/services/ComponentRegistry.ts
++++ b/frontend/src/services/ComponentRegistry.ts
+@@ -5,6 +5,8 @@
+  * Loads from components-metadata.json generated at build time.
+  */
+ 
++import { assetUrl } from '../pl/config';
++
+ import { prepareSearchFields, rankBySearch, type PreparedSearchFields } from '../utils/searchMatch';
+ import { componentSearchKeywords } from '../data/componentSearchKeywords';
+ import type {
+@@ -59,7 +61,7 @@
+       // `cache: 'no-store'` so adding a new component (or rebuilding the JSON)
+       // shows up after a single page refresh — without this, the browser keeps
+       // serving the stale copy until you do a hard reload.
+-      const response = await fetch('/components-metadata.json', { cache: 'no-store' });
++      const response = await fetch(assetUrl('/components-metadata.json'), { cache: 'no-store' });
+       if (!response.ok) {
+         throw new Error(`Failed to load metadata: ${response.statusText}`);
+       }
+diff --git a/frontend/src/simulation/spice/wasm/NgSpiceInteractive.ts b/frontend/src/simulation/spice/wasm/NgSpiceInteractive.ts
+--- a/frontend/src/simulation/spice/wasm/NgSpiceInteractive.ts
++++ b/frontend/src/simulation/spice/wasm/NgSpiceInteractive.ts
+@@ -43,6 +43,8 @@
+  * isolation overhead.
+  */
+ 
++import { assetUrl } from '../../../pl/config';
++
+ interface InitConfig {
+   /** URL prefix where the WASM artifacts live (must end with '/'). */
+   assetBaseUrl?: string;
+@@ -87,7 +89,7 @@
+   private readonly workerUrl: string;
+ 
+   constructor(config: InitConfig = {}) {
+-    this.assetBaseUrl = config.assetBaseUrl ?? DEFAULT_ASSET_BASE;
++    this.assetBaseUrl = config.assetBaseUrl ?? assetUrl(DEFAULT_ASSET_BASE);
+     // Vite-flavored worker URL: resolves to the bundled worker at build
+     // time. When running in tests with `vitest` + a JSDOM/node env this
+     // import.meta.url scheme also works.
+diff --git a/frontend/src/velxio-elements/breadboard-element.ts b/frontend/src/velxio-elements/breadboard-element.ts
+--- a/frontend/src/velxio-elements/breadboard-element.ts
++++ b/frontend/src/velxio-elements/breadboard-element.ts
+@@ -21,6 +21,8 @@
+  * which re-reads it on every measure (see CLAUDE.md §6a).
+  */
+ 
++import { assetUrl } from '../pl/config';
++
+ const SCALE = 4 / 3; // fritzing 7.2-unit pitch → 9.6 CSS px
+ const F_PITCH = 7.2;
+ const COLS = 63;
+@@ -96,7 +98,7 @@
+ let artPromise: Promise<string | null> | null = null;
+ function fetchArt(): Promise<string | null> {
+   if (!artPromise) {
+-    artPromise = fetch('/component-svgs/fritzing/breadboard-full.svg')
++    artPromise = fetch(assetUrl('/component-svgs/fritzing/breadboard-full.svg'))
+       .then((r) => (r.ok ? r.text() : null))
+       .catch(() => null);
+   }
+diff --git a/frontend/src/velxio-elements/breadboard-mini-element.ts b/frontend/src/velxio-elements/breadboard-mini-element.ts
+--- a/frontend/src/velxio-elements/breadboard-mini-element.ts
++++ b/frontend/src/velxio-elements/breadboard-mini-element.ts
+@@ -16,6 +16,8 @@
+  * module load so the getter stays cheap for the pin overlay.
+  */
+ 
++import { assetUrl } from '../pl/config';
++
+ const SCALE = 4 / 3;
+ const F_PITCH = 7.2;
+ const COLS = 17;
+@@ -64,7 +66,7 @@
+ let artPromise: Promise<string | null> | null = null;
+ function fetchArt(): Promise<string | null> {
+   if (!artPromise) {
+-    artPromise = fetch('/component-svgs/fritzing/breadboard-mini.svg')
++    artPromise = fetch(assetUrl('/component-svgs/fritzing/breadboard-mini.svg'))
+       .then((r) => (r.ok ? r.text() : null))
+       .catch(() => null);
+   }

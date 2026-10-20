@@ -21,7 +21,7 @@ def git(*args, cwd=None):
 
 
 def validate_runtime(lock):
-    dockerfile = (ROOT / "docker/Dockerfile").read_text(encoding="utf-8")
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     image = re.search(r"^ARG VELXIO_BASE_IMAGE=(\S+)$", dockerfile, re.MULTILINE)
     core = re.search(r"arduino-cli core install arduino:avr@(\S+)", dockerfile)
     simavr = re.search(r"^ARG SIMAVR_COMMIT=(\S+)$", dockerfile, re.MULTILINE)
@@ -85,7 +85,8 @@ def main():
             ROOT / "workspace/dependencies/backend-constraints.txt",
             source / "backend/constraints.txt",
         )
-        for name in ["docker", "scripts", "workspace"]:
+        shutil.copy2(ROOT / "Dockerfile", context / "Dockerfile")
+        for name in ["scripts", "workspace"]:
             shutil.copytree(ROOT / name, context / name)
         for name in ["grader", "course", "tests"]:
             if (ROOT / name).is_dir():
@@ -100,7 +101,7 @@ def main():
         with tarfile.open(context / "pl-adapter-source.tar.gz", "w:gz") as tar:
             for name in [
                 "workspace",
-                "docker",
+                "Dockerfile",
                 "scripts",
                 "toolchain.lock.json",
                 "LICENSE",

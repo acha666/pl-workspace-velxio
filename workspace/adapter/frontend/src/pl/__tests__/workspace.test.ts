@@ -45,6 +45,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
   vi.stubGlobal('window', { addEventListener: vi.fn() });
+  vi.stubGlobal('document', { addEventListener: vi.fn(), visibilityState: 'visible' });
   vi.stubGlobal('fetch', fetchMock);
   revision = 'r0';
   stores.project = {
@@ -76,6 +77,18 @@ describe('workspace lifecycle', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toBe('/workspace/test/api/pl-workspace');
     expect(workspace.workspaceState().status).toBe('saved');
+  });
+
+  it('saves immediately when the student leaves the workspace', async () => {
+    const workspace = await import('../workspace');
+    await workspace.initializeWorkspace();
+    stores.project = { ...stores.project, name: 'Edited just before leaving' };
+    stores.changed();
+    const [, blur] = vi.mocked(window.addEventListener).mock.calls.find(([type]) => type === 'blur')!;
+    (blur as () => void)();
+    expect(fetchMock.mock.calls.map(([, options]) => options?.method)).toEqual(['GET', 'PUT']);
+    await workspace.flushWorkspace();
+    expect(workspace.workspaceState().lastSavedAt).not.toBeNull();
   });
 
   it('saves an edit made while checking the remote revision before continuing', async () => {
