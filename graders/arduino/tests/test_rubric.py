@@ -275,6 +275,19 @@ def test_a_time_budget_that_is_not_a_positive_number_is_a_configuration_error(
         assert "TIME_BUDGET_S" in capsys.readouterr().err
 
 
+def test_full_marks_score_exactly_one_whatever_the_points(tmp_path: Path) -> None:
+    module = module_from(
+        "import arduinograder as ag\n"
+        + "".join(
+            f"@ag.points({points})\ndef test_{index}(source): pass\n"
+            for index, points in enumerate([1 / 7] * 7 + [2 / 3, 10 / 3, 1 / 3, 0.1 * 3])
+        )
+    )
+    results = FakeGrading(module, tmp_path).run()
+    assert results.score == 1.0
+    assert json.loads(json.dumps(results.to_dict()))["score"] == 1.0
+
+
 def test_a_module_without_tests_worth_points_is_a_configuration_error(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

@@ -318,9 +318,11 @@ def run_item(item: Item, resolve: Resolver) -> ItemResult:
     except Exception:
         traceback.print_exc()
         return ItemResult(item.name, 0, item.points, item.description, GRADER_ERROR_MESSAGE)
+    # Not rounded: rounding the points but not max_points puts a full-marks
+    # score off 1.0, which PrairieLearn rejects or shows as 99%.
     return ItemResult(
         item.name,
-        round(item.points * fraction, 4),
+        item.points * fraction,
         item.points,
         item.description,
         "\n".join(check.failures),
