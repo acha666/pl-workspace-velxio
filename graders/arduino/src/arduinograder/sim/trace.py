@@ -232,7 +232,8 @@ class PinTrace:
         return self.at(ms).level
 
     def _window(self, start_ms: float, end_ms: float | None) -> tuple[int, int]:
-        start = to_cycles(start_ms)
+        """Return the window in cycles; both ends are checked as ``at()`` checks its time."""
+        start = self._trace._cycle_at(start_ms)
         end = self._trace._end_cycle if end_ms is None else self._trace._cycle_at(end_ms)
         return start, end
 
@@ -306,7 +307,8 @@ class SerialTrace:
         return bool(self._data)
 
     def _window(self, start_ms: float, end_ms: float | None) -> list[tuple[int, int]]:
-        start = to_cycles(start_ms)
+        """Return the bytes in the window; both ends are checked as ``PinTrace.at()`` checks."""
+        start = self._trace._cycle_at(start_ms)
         end = self._trace._end_cycle if end_ms is None else self._trace._cycle_at(end_ms)
         return [(cycle, byte) for cycle, byte in self._data if start <= cycle <= end]
 
