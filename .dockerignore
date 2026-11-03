@@ -1,5 +1,4 @@
 .git
-.build*
 .upstream
 **/node_modules
 **/__pycache__

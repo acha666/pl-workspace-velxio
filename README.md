@@ -30,33 +30,31 @@ Edit each question's prompt and `workspace/project.vlx` to customize it. Each wo
 
 | Path                   | Contents                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------- |
-| `toolchain.lock.json`  | Velxio revision and image, AVR core and simavr commit; checked against the Dockerfile |
-| `Dockerfile`           | Shared `toolchain` stage and the `workspace` and `grader` targets with their tests |
+| `Dockerfile`           | Every version pin (Velxio commit and image, AVR core, simavr commit), the shared `toolchain` stage and the `workspace` and `grader` targets with their tests |
 | `pyproject.toml`, `uv.lock` | The [uv](https://docs.astral.sh/uv/) workspace: every grader under `graders/` is a member, with one lock file and shared lint settings |
 | `workspaces/arduino/`  | The Arduino workspace image: Velxio adapter, upstream patches, dependency locks, nginx, entrypoint and its image test |
 | `graders/arduino/`     | The Arduino grader: `avrsim` simavr runner, the `arduinograder` package (`src/`) and its tests |
 | `course/`              | Files to copy into a course: question templates and `velxio.py`                 |
-| `scripts/`             | `prepare.py` for the build context and `grade.py` for grading sketches          |
-| `tests/`               | Tests for the scripts and course templates; see [tests](tests/README.md)        |
+| `scripts/`             | `grade.py` for grading sketches                                                 |
+| `tests/`               | Tests for the course templates; see [tests](tests/README.md)                    |
 
 Further graders go in `graders/<name>/` as workspace members and further workspace images in `workspaces/<name>/`, each with its own Dockerfile targets.
 
 ## Build and test
 
-Requires Docker, Git and Python 3.12+. Builds download dependencies; running workspaces and grading need no internet access.
+Requires Docker and Python 3.12+. Builds download dependencies; running workspaces and grading need no internet access.
 
 ```sh
-python3 scripts/prepare.py
-docker build --target frontend-test .build
-docker build --target backend-test .build
-docker build --target grader-test .build
-docker build --platform linux/amd64 --target workspace -t pl-workspace-velxio:arduino .build
-docker build --platform linux/amd64 --target grader -t pl-arduino-grader .build
-bash workspaces/arduino/tests/run.sh pl-workspace-velxio:arduino
-python3 scripts/grade.py --image pl-arduino-grader --cases graders/arduino/tests/cases/arduino/blinkWithoutDelay course/questions/arduino/blinkWithoutDelay
+docker build --target frontend-test .
+docker build --target backend-test .
+docker build --target grader-test .
+docker build --platform linux/amd64 --target workspace -t pl-arduino-workspace:dev .
+docker build --platform linux/amd64 --target grader -t pl-arduino-grader:dev .
+bash workspaces/arduino/tests/run.sh pl-arduino-workspace:dev
+python3 scripts/grade.py --image pl-arduino-grader:dev --cases graders/arduino/tests/cases/arduino/blinkWithoutDelay course/questions/arduino/blinkWithoutDelay
 ```
 
-Use a fresh `--output` directory when preparing again. Tests run in containers and cover saves, compilation, templates and Chromium through a PrairieLearn-style proxy, the grader package, and the template cases under production grader limits. The grader targets also build from the repository root (`docker build --target grader .`), which is quicker while working on the grader.
+The Dockerfile fetches the pinned Velxio commit and applies the patches, adapter and dependency locks itself; to try changes in a local Velxio checkout of that commit, add `--build-context velxio-upstream=PATH`. Tests run in containers and cover saves, compilation, templates and Chromium through a PrairieLearn-style proxy, the source the workspace offers, the grader package, and the template cases under production grader limits.
 
 The grader's Python code is developed with [uv](https://docs.astral.sh/uv/): `cd graders/arduino && uv sync` creates the environment, and `uv run ruff check .`, `uv run mypy` and `uv run pytest` lint, type-check and test it. Tests that compile or simulate are skipped unless `arduino-cli` and `avrsim` are installed, so run `docker build --target grader-test .` for the full suite. `grader-test` runs the same three commands.
 
@@ -66,4 +64,4 @@ Stable Git tags such as `v2.0.0` run all container tests before publishing `ardu
 
 Before tagging, update the [changelog](CHANGELOG.md) and template image versions, run the checks above, then commit and push the release commit and tag. Confirm the tag workflow succeeds and the versioned images are available before using them in a course.
 
-Update the pins in `toolchain.lock.json`, the Dockerfile and `workspaces/arduino/dependencies/` together, review patch conflicts and rerun all tests when upgrading. [Source and license](SOURCE.md).
+Update the pins at the top of the Dockerfile and `workspaces/arduino/dependencies/` together, review patch conflicts and rerun all tests when upgrading. [Source and license](SOURCE.md).

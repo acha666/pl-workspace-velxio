@@ -1,12 +1,14 @@
 #!/bin/bash
 # Test a built workspace image with each template: the API smoke test inside
 # the container, Chromium through a PrairieLearn-style proxy, persistence
-# across container replacement and clean shutdown.
+# across container replacement and clean shutdown. Then check the source the
+# image offers: no course files or graders, and the image rebuilds from it.
 set -euo pipefail
 cd "$(dirname "$0")/../../.."
-image=${1:-pl-workspace-velxio:test}
+image=${1:-pl-arduino-workspace:dev}
 container=
 volume=
+offer=
 cleanup() {
     if [[ -n "$container" ]]; then
         docker logs "$container" >&2
@@ -14,6 +16,9 @@ cleanup() {
     fi
     if [[ -n "$volume" ]]; then
         docker volume rm "$volume" >/dev/null
+    fi
+    if [[ -n "$offer" ]]; then
+        rm -rf "$offer"
     fi
 }
 trap cleanup EXIT
@@ -53,3 +58,15 @@ for template in blink sevenSegment; do
     volume=
     echo "$template: browser, container replacement persistence and shutdown passed."
 done
+
+offer=$(mktemp -d)
+docker run --rm --network none --entrypoint cat "$image" \
+    /usr/share/nginx/html/pl-adapter-source.tar.gz | tar -xz -C "$offer"
+test -f "$offer/Dockerfile"
+for path in course graders tests scripts; do
+    test ! -e "$offer/$path"
+done
+# Matching files hit the build cache, so this is quick after building the image.
+docker buildx build --quiet --platform linux/amd64 --target workspace \
+    --output type=cacheonly "$offer" >/dev/null
+echo "Source offer: no course files or graders, and the workspace rebuilds from it."

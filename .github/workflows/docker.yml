@@ -41,15 +41,12 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           test -n "$DOCKERHUB_IMAGE" && test -n "$DOCKERHUB_USERNAME"
 
-      - name: Prepare upstream source
-        run: python3 scripts/prepare.py
-
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Test frontend
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: .build
+          context: .
           target: frontend-test
           platforms: linux/amd64
           cache-from: type=gha,scope=arduino
@@ -57,7 +54,7 @@ jobs:
       - name: Test backend and question templates
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: .build
+          context: .
           target: backend-test
           platforms: linux/amd64
           cache-from: type=gha,scope=arduino
@@ -65,7 +62,7 @@ jobs:
       - name: Test grader
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: .build
+          context: .
           target: grader-test
           platforms: linux/amd64
           cache-from: |
@@ -75,7 +72,7 @@ jobs:
       - name: Build Arduino workspace
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: .build
+          context: .
           target: workspace
           platforms: linux/amd64
           load: true
@@ -93,7 +90,7 @@ jobs:
       - name: Build grader
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: .build
+          context: .
           target: grader
           platforms: linux/amd64
           load: true
