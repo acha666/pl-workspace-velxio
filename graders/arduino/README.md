@@ -133,12 +133,12 @@ def test_responds_to_the_button(session):
 from arduinograder.extras import find_calls, no_calls
 ```
 
-`gates = [no_calls("delay", "delayMicroseconds")]` stops grading with score 0, listing up to three offending lines, if the sketch calls any named function. `find_calls(source, names)` returns the calls, each with `name`, `line` and `text`, without stopping; use it to take off only some points:
+`gates = [no_calls("delay", "delayMicroseconds")]` stops grading with score 0, listing up to three offending lines, if the sketch calls any named function. `find_calls(source, *names)` returns the calls, each with `name`, `line` and `text`, without stopping; use it to take off only some points:
 
 ```python
 @ag.points(1)
 def test_no_delay(source):
-    assert not find_calls(source, ["delay"]), "Use millis() instead of delay()."
+    assert not find_calls(source, "delay"), "Use millis() instead of delay()."
 ```
 
 Both parse the source with tree-sitter: comments, strings and methods with the same name (`obj.delay()`) are ignored, but calls hidden behind macros, function pointers or wrapper functions are not found. Where blocking code matters, a behavioural test (for example, a button must respond while the LEDs blink) is harder to get around.
