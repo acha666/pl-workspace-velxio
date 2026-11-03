@@ -5,11 +5,10 @@ import copy
 import hashlib
 import json
 import os
-from pathlib import Path
 import time
 import urllib.error
 import urllib.request
-
+from pathlib import Path
 
 BASE = "http://127.0.0.1:8080"
 

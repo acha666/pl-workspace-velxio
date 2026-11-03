@@ -6,7 +6,6 @@ import json
 
 import prairielearn as pl
 
-
 MAX_PROJECT_BYTES = 1024 * 1024
 MAX_SKETCH_BYTES = 128 * 1024
 

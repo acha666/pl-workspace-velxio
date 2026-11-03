@@ -9,12 +9,12 @@ grader limits: no network, 0.9 CPU and 2 GiB of memory.
 
 import argparse
 import json
-from pathlib import Path
 import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 
 def docker(*args, **kwargs):

@@ -4,12 +4,11 @@ import base64
 import copy
 import importlib.util
 import json
-from pathlib import Path
 import sys
 import types
 import unittest
+from pathlib import Path
 from unittest.mock import patch
-
 
 ROOT = Path(__file__).resolve().parents[2]
 QUESTIONS = ROOT / "course/questions/arduino"

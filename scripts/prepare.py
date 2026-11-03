@@ -4,12 +4,12 @@
 import argparse
 import io
 import json
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import tarfile
 import tempfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
