@@ -9,10 +9,12 @@ does that for the submission PrairieLearn lays out and writes the results.
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import math
 import os
 import sys
 import traceback
+from collections.abc import Callable
 from functools import cached_property
 from pathlib import Path
 from types import ModuleType
@@ -49,6 +51,13 @@ FIXTURE_NAMES: Final[frozenset[str]] = frozenset(
     }
 )
 """The fixtures that are attributes of ``Grading``; ``trace`` and ``check`` are made per test."""
+FIRMWARE_FIXTURES: Final[frozenset[str]] = frozenset({"firmware", "trace", "simulate", "session"})
+"""The fixtures that compile the sketch."""
+
+
+def _parameters(func: Callable[..., object]) -> frozenset[str]:
+    """Return the names of a function's parameters: the fixtures it asks for."""
+    return frozenset(inspect.signature(func).parameters)
 
 
 class Grading:
@@ -186,6 +195,10 @@ class Grading:
             self.sandbox.prepare()
             for func in gates:
                 run_gate(func, self.resolve)
+            if any(FIRMWARE_FIXTURES & _parameters(item.func) for item in items):
+                # Compile before the tests: a compile error then stops grading
+                # before any test is recorded, as a gate does.
+                self.resolve("firmware")
             for item in items:
                 self.results.add(run_item(item, self.resolve))
         except StopGrading as stop:

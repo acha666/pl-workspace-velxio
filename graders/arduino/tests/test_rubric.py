@@ -15,7 +15,7 @@ from arduinograder.errors import INTERNAL_ERROR_MESSAGE
 from arduinograder.grading import Grading
 from arduinograder.pl import Submission
 from arduinograder.sandbox import Budget, Sandbox
-from arduinograder.toolchain import Firmware
+from arduinograder.toolchain import CompileError, Firmware
 
 TRACE = ag.Trace.from_text(
     "P 0 13 I\nP 16000 13 L\nP 32000 13 H\nP 8000000 13 L\nT 32000000 reached"
@@ -321,3 +321,27 @@ def test_a_module_without_tests_worth_points_is_a_configuration_error(
         results = FakeGrading(module_from(source), tmp_path).run()
         assert not results.gradable and results.message == INTERNAL_ERROR_MESSAGE
         assert "no tests worth points" in capsys.readouterr().err
+
+
+def test_a_compile_error_stops_grading_before_any_test(tmp_path: Path) -> None:
+    class Failing(FakeGrading):
+        @cached_property
+        def firmware(self) -> Firmware:
+            raise CompileError("bad")
+
+    module = module_from(
+        """
+import arduinograder as ag
+scenario = ag.Scenario(duration_ms=2000)
+
+@ag.points(1)
+def test_source(source): pass
+
+@ag.points(1)
+def test_trace(trace): pass
+"""
+    )
+    results = Failing(module, tmp_path).run()
+    assert results.stopped and results.items == [] and "bad" in results.message
+    source_only = module_from("import arduinograder as ag\n@ag.points(1)\ndef test_a(source): pass")
+    assert Failing(source_only, tmp_path).run().score == 1.0
