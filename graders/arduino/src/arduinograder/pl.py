@@ -94,7 +94,8 @@ class Submission:
         """The submitted sketch.
 
         Raises:
-            Ungradable: If there is no sketch to grade, with a message for the student.
+            Ungradable: If there is no sketch to grade, or several, with a
+                message for the student.
         """
         if self.sketch_file:
             candidates = [self.student_dir / self.sketch_file]
@@ -102,7 +103,14 @@ class Submission:
             candidates = [self.student_dir / "sketch.ino"]
         else:
             candidates = sorted(self.student_dir.glob("*.ino"))
-        if len(candidates) != 1 or not candidates[0].is_file():
+        if len(candidates) > 1:
+            names = ", ".join(path.name for path in candidates)
+            raise Ungradable(
+                f"Several sketches were submitted ({names}). Submit one .ino file and try again."
+            )
+        # A symbolic link could point the grader, which runs as root, at a file
+        # the sketch itself may not read.
+        if len(candidates) != 1 or candidates[0].is_symlink() or not candidates[0].is_file():
             name = self.sketch_file or "an Arduino sketch (.ino file)"
             raise Ungradable(f"No submission was found. Submit {name} and try again.")
         return candidates[0]

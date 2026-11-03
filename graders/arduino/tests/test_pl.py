@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from arduinograder import cli, grading, pl, rubric
-from arduinograder.errors import INTERNAL_ERROR_MESSAGE
+from arduinograder.errors import INTERNAL_ERROR_MESSAGE, Ungradable
 from arduinograder.pl import Results
 from arduinograder.rubric import ItemResult
 
@@ -139,3 +139,16 @@ def test_loading_a_test_module_works_like_running_it(tmp_path: Path) -> None:
     )
     module = grading.load_module(tests / "test.py")
     assert [item.name for item in rubric.collect(module)[1]] == ["Led"]
+
+
+def test_several_sketches_and_links_are_not_graded(tmp_path: Path) -> None:
+    student = tmp_path / "student"
+    student.mkdir()
+    (student / "a.ino").write_text("void loop() {}")
+    (student / "b.ino").write_text("void loop() {}")
+    with pytest.raises(Ungradable, match=r"Several sketches were submitted \(a.ino, b.ino\)"):
+        pl.Submission(tmp_path).sketch_path  # noqa: B018
+    (tmp_path / "secret").write_text("void loop() {}")
+    (student / "sketch.ino").symlink_to(tmp_path / "secret")
+    with pytest.raises(Ungradable, match="No submission"):
+        pl.Submission(tmp_path).sketch_path  # noqa: B018
