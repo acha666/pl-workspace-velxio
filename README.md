@@ -32,11 +32,13 @@ Edit each question's prompt and `workspace/project.vlx` to customize it. Each wo
 | ---------------------- | ------------------------------------------------------------------------------- |
 | `toolchain.lock.json`  | Velxio revision and image, AVR core and simavr commit; checked against the Dockerfile |
 | `Dockerfile`           | Shared `toolchain` stage and the `workspace` and `grader` targets with their tests |
-| `workspace/`           | Velxio adapter, upstream patches, dependency locks, nginx and entrypoint         |
+| `workspaces/arduino/`  | The Arduino workspace image: Velxio adapter, upstream patches, dependency locks, nginx, entrypoint and its image test |
 | `grader/`              | `avrsim` simavr runner and the `arduinograder` package                           |
 | `course/`              | Files to copy into a course: question templates and `velxio.py`                 |
 | `scripts/`             | `prepare.py` for the build context and `grade.py` for grading sketches          |
-| `tests/`               | Tests for the scripts, course templates, grader and workspace image; see [tests](tests/README.md) |
+| `tests/`               | Tests for the scripts, course templates and grader; see [tests](tests/README.md) |
+
+Further workspace images go in `workspaces/<name>/`, each with its own Dockerfile targets.
 
 ## Build and test
 
@@ -49,7 +51,7 @@ docker build --target backend-test .build
 docker build --target grader-test .build
 docker build --platform linux/amd64 --target workspace -t pl-workspace-velxio:arduino .build
 docker build --platform linux/amd64 --target grader -t pl-arduino-grader .build
-bash tests/workspace/run.sh pl-workspace-velxio:arduino
+bash workspaces/arduino/tests/run.sh pl-workspace-velxio:arduino
 python3 scripts/grade.py --image pl-arduino-grader --cases tests/grader/cases/arduino/blinkWithoutDelay course/questions/arduino/blinkWithoutDelay
 ```
 
@@ -61,4 +63,4 @@ Stable Git tags such as `v2.0.0` run all container tests before publishing `ardu
 
 Before tagging, update the [changelog](CHANGELOG.md) and template image versions, run the checks above, then commit and push the release commit and tag. Confirm the tag workflow succeeds and the versioned images are available before using them in a course.
 
-Update the pins in `toolchain.lock.json`, the Dockerfile and `workspace/dependencies/` together, review patch conflicts and rerun all tests when upgrading. [Source and license](SOURCE.md).
+Update the pins in `toolchain.lock.json`, the Dockerfile and `workspaces/arduino/dependencies/` together, review patch conflicts and rerun all tests when upgrading. [Source and license](SOURCE.md).

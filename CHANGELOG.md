@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+The workspace image is unchanged apart from where its sources live.
+
+### Repository
+
+- The Arduino workspace sources are in `workspaces/arduino/`, with the workspace image test beside them; `tests/` keeps the script, course template and grader tests.
+
 ## 2.0.0 — 2026-10-20
 
 - Images are tagged `arduino-workspace-X.Y.Z` and `arduino-grader-X.Y.Z`. The 1.0.0 workspace keeps its `arduino-1.0.0` tags; update question `info.json` files when upgrading.

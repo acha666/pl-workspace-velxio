@@ -44,7 +44,7 @@ def main():
     args = parser.parse_args()
     lock = json.loads((ROOT / "toolchain.lock.json").read_text())
     validate_runtime(lock)
-    patches = sorted((ROOT / "workspace/patches").glob("*.patch"))
+    patches = sorted((ROOT / "workspaces/arduino/patches").glob("*.patch"))
     if not patches:
         parser.error("No PL adapter patch was found.")
     output = args.output.resolve()
@@ -76,17 +76,17 @@ def main():
         for patch in patches:
             git("apply", "--check", str(patch), cwd=source)
             git("apply", str(patch), cwd=source)
-        shutil.copytree(ROOT / "workspace/adapter", source, dirs_exist_ok=True)
+        shutil.copytree(ROOT / "workspaces/arduino/adapter", source, dirs_exist_ok=True)
         shutil.copy2(
-            ROOT / "workspace/dependencies/frontend-package-lock.json",
+            ROOT / "workspaces/arduino/dependencies/frontend-package-lock.json",
             source / "frontend/package-lock.json",
         )
         shutil.copy2(
-            ROOT / "workspace/dependencies/backend-constraints.txt",
+            ROOT / "workspaces/arduino/dependencies/backend-constraints.txt",
             source / "backend/constraints.txt",
         )
         shutil.copy2(ROOT / "Dockerfile", context / "Dockerfile")
-        for name in ["scripts", "workspace"]:
+        for name in ["scripts", "workspaces"]:
             shutil.copytree(ROOT / name, context / name)
         for name in ["grader", "course", "tests"]:
             if (ROOT / name).is_dir():
@@ -100,7 +100,7 @@ def main():
         # build inputs. Questions and instructor answers are excluded.
         with tarfile.open(context / "pl-adapter-source.tar.gz", "w:gz") as tar:
             for name in [
-                "workspace",
+                "workspaces",
                 "Dockerfile",
                 "scripts",
                 "toolchain.lock.json",

@@ -73,8 +73,8 @@ RUN python -m pytest -q /tests
 FROM backend AS workspace
 COPY --from=frontend-builder /app/frontend/dist/ /usr/share/nginx/html/
 COPY pl-adapter-source.tar.gz /usr/share/nginx/html/pl-adapter-source.tar.gz
-COPY workspace/nginx.conf /app/pl-nginx.conf
-COPY --chmod=755 workspace/entrypoint.sh /app/pl-entrypoint.sh
+COPY workspaces/arduino/nginx.conf /app/pl-nginx.conf
+COPY --chmod=755 workspaces/arduino/entrypoint.sh /app/pl-entrypoint.sh
 LABEL com.prairielearn.workspace.port="8080" \
       com.prairielearn.workspace.home="/workspace" \
       com.prairielearn.workspace.rewrite-url="true" \

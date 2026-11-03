@@ -55,21 +55,21 @@ def project(tmp_path, monkeypatch):
     git(repository, "init", "--quiet")
     root = repository / "nested workspace"
     for directory in [
-        "workspace/patches",
-        "workspace/adapter/frontend",
-        "workspace/dependencies",
+        "workspaces/arduino/patches",
+        "workspaces/arduino/adapter/frontend",
+        "workspaces/arduino/dependencies",
         "scripts",
         "tests",
         "course",
         "grader",
     ]:
         (root / directory).mkdir(parents=True)
-    (root / "workspace/patches/workspace.patch").write_bytes(patch)
-    (root / "workspace/adapter/frontend/workspace.ts").write_text(
+    (root / "workspaces/arduino/patches/workspace.patch").write_bytes(patch)
+    (root / "workspaces/arduino/adapter/frontend/workspace.ts").write_text(
         "export const workspace = true;\n"
     )
-    (root / "workspace/dependencies/frontend-package-lock.json").write_text("{}\n")
-    (root / "workspace/dependencies/backend-constraints.txt").write_text(
+    (root / "workspaces/arduino/dependencies/frontend-package-lock.json").write_text("{}\n")
+    (root / "workspaces/arduino/dependencies/backend-constraints.txt").write_text(
         "fastapi==0.135.1\n"
     )
     (root / "Dockerfile").write_text(
@@ -150,7 +150,7 @@ def test_nested_checkout_applies_patch_and_distributed_source_rebuilds(
 
 def test_patches_apply_in_name_order(project, monkeypatch):
     root, upstream = project
-    patches = root / "workspace/patches"
+    patches = root / "workspaces/arduino/patches"
     (patches / "workspace.patch").rename(patches / "0001-first.patch")
     (patches / "0002-second.patch").write_text(
         "diff --git a/frontend/example.txt b/frontend/example.txt\n"
@@ -169,7 +169,7 @@ def test_patches_apply_in_name_order(project, monkeypatch):
 
 def test_failed_patch_leaves_no_output(project, monkeypatch):
     root, upstream = project
-    (root / "workspace/patches/workspace.patch").write_text("Not a patch.\n")
+    (root / "workspaces/arduino/patches/workspace.patch").write_text("Not a patch.\n")
     output = root / ".build"
     with pytest.raises(subprocess.CalledProcessError):
         run_prepare(monkeypatch, upstream, output)
