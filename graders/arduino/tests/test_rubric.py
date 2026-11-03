@@ -288,6 +288,29 @@ def test_full_marks_score_exactly_one_whatever_the_points(tmp_path: Path) -> Non
     assert json.loads(json.dumps(results.to_dict()))["score"] == 1.0
 
 
+def test_gates_fail_like_tests_and_check_messages_become_text(tmp_path: Path) -> None:
+    module = module_from(
+        """
+import arduinograder as ag
+scenario = ag.Scenario(duration_ms=2000)
+
+@ag.gate
+def check_output(trace):
+    assert trace.pin(13).at(600).is_high, "LED off at 600 ms"
+
+@ag.points(1)
+def test_never_runs(trace): pass
+"""
+    )
+    results = FakeGrading(module, tmp_path).run()
+    assert results.stopped and results.message == "LED off at 600 ms"
+    assert results.items == []
+    check = rubric.Check()
+    check(False, 42)  # type: ignore[arg-type]
+    check.fail(None)  # type: ignore[arg-type]
+    assert check.failures == ["42", "None"]
+
+
 def test_a_module_without_tests_worth_points_is_a_configuration_error(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

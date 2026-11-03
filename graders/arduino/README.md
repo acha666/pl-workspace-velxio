@@ -54,7 +54,7 @@ A test is a function decorated with `points()`. It receives the fixtures it name
 
 The module may define `scenario`, a `Scenario` or a function returning one, which the `trace` fixture runs; a test can use its own with `@ag.with_scenario(...)`. Each distinct scenario is simulated once per submission.
 
-`gates` is a list of functions that run before the tests; a gate takes fixtures like a test and stops grading with zero points by raising `ag.StopGrading(message)` or returning a message. Functions decorated with `@ag.gate` are gates too. A compile error is a gate that always applies: the student sees the compiler output, up to the first 20 errors, and scores 0.
+`gates` is a list of functions that run before the tests; a gate takes fixtures like a test and stops grading with zero points by raising `ag.StopGrading(message)`, returning a message or failing an `assert`. Functions decorated with `@ag.gate` are gates too. A compile error is a gate that always applies: the student sees the compiler output, up to the first 20 errors, and scores 0.
 
 Raise `ag.Ungradable(message)` anywhere when the submission cannot be graded; PrairieLearn then does not count the attempt. An unexpected error outside a test, or a wall-clock overrun, is reported the same way.
 

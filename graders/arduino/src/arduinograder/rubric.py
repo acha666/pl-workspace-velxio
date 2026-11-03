@@ -148,20 +148,21 @@ class Check:
 
         Args:
             condition: What should be true.
-            message: Shown to the student if it is not.
+            message: Shown to the student if it is not; anything else is
+                converted to text.
 
         Returns:
             The condition as a bool, so a test can stop early.
         """
         self.total += 1
         if not condition:
-            self.failures.append(message)
+            self.failures.append(str(message))
         return bool(condition)
 
     def fail(self, message: str) -> None:
         """Record a failure outright."""
         self.total += 1
-        self.failures.append(message)
+        self.failures.append(str(message))
 
     @property
     def ok(self) -> bool:
@@ -250,9 +251,9 @@ def collect(module: ModuleType) -> tuple[list[TestFunction], list[Item]]:
             items.append(
                 Item(
                     func,
-                    spec.name or _default_name(func),
+                    str(spec.name) if spec.name else _default_name(func),
                     spec.points,
-                    spec.description,
+                    str(spec.description),
                     spec.scenario,
                 )
             )
@@ -277,9 +278,16 @@ def run_gate(func: TestFunction, resolve: Resolver) -> None:
     """Run a gate.
 
     Raises:
-        StopGrading: If the gate raised it or returned a message.
+        StopGrading: If the gate raised it or returned a message, or if it
+            failed an ``assert`` or asked about a time after the simulation
+            stopped, as a test would fail.
     """
-    message = call_with_fixtures(func, resolve)
+    try:
+        message = call_with_fixtures(func, resolve)
+    except AssertionError as error:
+        raise StopGrading(str(error) or "A check failed.") from None
+    except SimulationStopped as stopped:
+        raise StopGrading(str(stopped)) from None
     if message:
         raise StopGrading(str(message))
 
