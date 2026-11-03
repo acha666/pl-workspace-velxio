@@ -6,7 +6,7 @@ import pytest
 
 from arduinograder import PinState, Scenario, SimulationStopped, Trace
 from arduinograder.sim import AnalogEvent, DigitalEvent, ReleaseEvent, SendEvent, runner
-from arduinograder.sim.trace import as_stop_reason
+from arduinograder.sim.trace import as_level, as_stop_reason
 
 BLINK_TRACE = """
 P 0 13 I
@@ -156,3 +156,25 @@ def test_describe_lists_only_the_first_edges() -> None:
     assert len(edges) == 40
     described = edges.describe()
     assert described.endswith(", and 15 more") and described.count(" ms") == 25
+
+
+def test_levels_are_checked_and_pulses_are_all_or_nothing() -> None:
+    given: list[PinState | str | int] = [1, 0, True, False, "HIGH", "low", "1", PinState.LOW]
+    assert [as_level(value) for value in given] == [1, 0, 1, 0, 1, 0, 1, 0]
+    bad: PinState | str | int
+    for bad in (2, -1, "ON", PinState.INPUT):
+        with pytest.raises(ValueError):
+            as_level(bad)
+    for duration in (float("nan"), float("inf"), 0):
+        with pytest.raises(ValueError):
+            Scenario(duration)
+    scenario = Scenario(duration_ms=100)
+    with pytest.raises(ValueError):
+        scenario.pulse(2, 1, at_ms=10, duration_ms=-1)
+    with pytest.raises(ValueError):
+        scenario.pulse(2, 1, at_ms=95, duration_ms=10)
+    with pytest.raises(ValueError):
+        scenario.pulse(2, "ON", at_ms=10, duration_ms=10)
+    assert scenario.events == []
+    event = scenario.set(2, "LOW").events[0]
+    assert isinstance(event, DigitalEvent) and event.level == 0

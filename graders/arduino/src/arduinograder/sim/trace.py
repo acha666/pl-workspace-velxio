@@ -69,6 +69,33 @@ STATE_CODES: Final[Mapping[str, PinState]] = {
 """The one-letter state codes in avrsim's ``P`` records."""
 
 
+LevelLike: TypeAlias = PinState | str | int
+"""A level as ``HIGH``/``LOW`` (1/0), a bool, ``"HIGH"``/``"LOW"``, or an output ``PinState``."""
+
+
+def as_level(value: LevelLike) -> Level:
+    """Return 1 or 0 for a level given in any accepted form.
+
+    Raises:
+        ValueError: If ``value`` is not a level: an input ``PinState``, another
+            string, or a number other than 0 and 1.
+    """
+    if isinstance(value, PinState):
+        if value.level is None:
+            raise ValueError(f"Not an output level: {value!r}")
+        return value.level
+    if isinstance(value, str):
+        name = value.strip().upper()
+        if name in ("HIGH", "1"):
+            return 1
+        if name in ("LOW", "0"):
+            return 0
+        raise ValueError(f"Not a level: {value!r}")
+    if value in (0, 1):
+        return 1 if value else 0
+    raise ValueError(f"Not a level: {value!r}")
+
+
 class Change(NamedTuple):
     """A recorded change of a pin's state.
 

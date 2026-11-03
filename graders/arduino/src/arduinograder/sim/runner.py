@@ -14,7 +14,7 @@ from ..errors import TIMEOUT_MESSAGE, Ungradable
 from ..sandbox import SIMULATOR_LIMITS, Budget, Sandbox, kill
 from ..toolchain import Firmware
 from .scenario import Scenario
-from .trace import STATE_CODES, Line, PinState, Record, RecordKind, Trace
+from .trace import STATE_CODES, LevelLike, Line, PinState, Record, RecordKind, Trace, as_level
 
 FinalReason: TypeAlias = Literal["done", "crashed", "pin-limit", "serial-limit"]
 """Why a program stops for good."""
@@ -341,10 +341,15 @@ class Session:
         """
         return self._run_to(self._cycle + to_cycles(ms))
 
-    def set(self, pin: PinLike, level: int | bool) -> None:
-        """Drive a digital input from outside, overriding any internal pull-up."""
+    def set(self, pin: PinLike, level: LevelLike) -> None:
+        """Drive a digital input from outside, overriding any internal pull-up.
+
+        Raises:
+            ValueError: If the pin or level is invalid.
+        """
+        command = f"set {pin_number(pin)} {as_level(level)}"
         self._mark()
-        self._command(f"set {pin_number(pin)} {1 if level else 0}")
+        self._command(command)
 
     def release(self, pin: PinLike) -> None:
         """Stop driving a digital input from outside.
@@ -373,7 +378,7 @@ class Session:
         for start in range(0, len(data), SEND_CHUNK):
             self._command("send " + data[start : start + SEND_CHUNK].hex())
 
-    def pulse(self, pin: PinLike, level: int | bool, *, duration_ms: float) -> bool:
+    def pulse(self, pin: PinLike, level: LevelLike, *, duration_ms: float) -> bool:
         """Drive a pin to ``level`` now and release it ``duration_ms`` later.
 
         A button press is a HIGH pulse, or a LOW one for a button to ground:
@@ -387,7 +392,13 @@ class Session:
 
         Returns:
             Whether the program is still running.
+
+        Raises:
+            ValueError: If the duration is negative or the pin or level is
+                invalid; the pin is not driven then.
         """
+        if duration_ms < 0:
+            raise ValueError(f"A pulse cannot last {duration_ms} ms.")
         self.set(pin, level)
         running = self.run_for(duration_ms)
         self.release(pin)
