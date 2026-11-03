@@ -273,6 +273,12 @@ def test_each_pin_keeps_its_own_place_in_the_records(session: SessionFn) -> None
         assert run.wait_for(9, timeout_ms=0) is None
 
 
+NO_NEWLINE = """
+void setup() { Serial.begin(115200); }
+void loop() { Serial.print("value "); }
+"""
+
+
 def test_each_compilation_keeps_its_own_firmware(toolchain: tuple[Compiler, Simulator]) -> None:
     compiler, simulator = toolchain
     blink = compiler.compile(BLINK)
@@ -287,3 +293,10 @@ def test_a_timed_out_wait_leaves_the_changes_for_a_later_one(session: SessionFn)
         run.run_until(100)
         assert run.wait_for(13, "INPUT", timeout_ms=600) is None
         assert run.wait_for(13, "HIGH", timeout_ms=0) == pytest.approx(500, abs=1)
+
+
+def test_waiting_for_a_line_needs_a_newline(session: SessionFn) -> None:
+    with session(NO_NEWLINE) as run:
+        assert run.wait_for_line(timeout_ms=200) is None
+        assert run.now_ms == 200
+        assert run.trace.serial.text().startswith("value value")

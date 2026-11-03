@@ -21,7 +21,8 @@ FinalReason: TypeAlias = Literal["done", "crashed", "pin-limit", "serial-limit"]
 RunReason: TypeAlias = Literal["reached", "watched", "done", "crashed", "pin-limit", "serial-limit"]
 """Why a ``run`` command ended: the target cycle, a watched record, or a final reason."""
 Watch: TypeAlias = tuple[RecordKind, int] | None
-"""What a run stops early for: a record kind and key, such as ``("P", 13)``, or nothing."""
+"""What a run stops early for: a pin's change as ``("P", 13)``, a Serial byte as
+``("S", byte)``, or nothing."""
 NEWLINE: Final = ord("\n")
 StateLike: TypeAlias = PinState | str | int | None
 """A pin state as a ``PinState``, its name, or a level."""
@@ -431,7 +432,7 @@ class Session:
         deadline = self._cycle + to_cycles(timeout_ms)
         while True:
             line = self._next_line()
-            if line is not None or self._run(deadline, watch=("S", 0)) != "watched":
+            if line is not None or self._run(deadline, watch=("S", NEWLINE)) != "watched":
                 return line
 
     def _next_line(self) -> Line | None:
