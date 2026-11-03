@@ -84,8 +84,6 @@ COPY --from=velxio-source /src/backend/app/ /app/app/
 FROM backend AS backend-test
 RUN pip install --no-cache-dir pytest==8.3.5
 COPY --from=velxio-source /src/backend/tests/test_pl_workspace.py /tests/test_pl_workspace.py
-COPY tests/course/ /tests/course/
-COPY course/ /course/
 ENV PYTHONPATH=/app
 RUN python -m pytest -q /tests
 

@@ -1,10 +1,10 @@
 # Tests
 
-This folder tests the course files. Each grader and workspace image keeps its own tests next to its sources. The Python tests use pytest and run in the Docker target that provides what they need; see the main [README](../README.md#build-and-test) for the commands.
+This folder tests the course files. Each grader and workspace image keeps its own tests next to its sources. The Python tests use pytest; those that need a toolchain or the Velxio source run in the Docker target that provides it. See the main [README](../README.md#build-and-test) for the commands.
 
 | Tests                              | Cover                                                                                        | Run by                                  |
 | ---------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `tests/course/`                    | Question templates and `course/serverFilesCourse/velxio.py`                                  | `backend-test` target                   |
+| `tests/course/`                    | Question templates and `course/serverFilesCourse/velxio.py`                                  | `uv run pytest` at the root             |
 | `graders/arduino/tests/`           | `arduinograder` and `avrsim`, and course questions graded end to end with `cases/`           | `grader-test` target, or `uv run pytest` in `graders/arduino` |
 | `workspaces/arduino/tests/`        | A built workspace image: API in the container, Chromium through a PrairieLearn-style proxy, persistence, shutdown and the source it offers | `bash workspaces/arduino/tests/run.sh IMAGE` |
 

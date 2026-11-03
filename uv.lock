@@ -11,6 +11,9 @@ members = [
     "arduinograder",
 ]
 
+[manifest.dependency-groups]
+dev = [{ name = "pytest", specifier = ">=9.2.0" }]
+
 [[package]]
 name = "arduinograder"
 version = "3.0.0.dev0"
