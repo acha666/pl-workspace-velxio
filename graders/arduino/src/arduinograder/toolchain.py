@@ -23,7 +23,8 @@ NOISE: Final = re.compile(
 )
 """Lines of compiler output that tell the student nothing, dropped from the log."""
 LIMIT_HIT: Final = re.compile(
-    r"CPU time limit exceeded|out of memory allocating|File size limit exceeded|Killed \(program"
+    r"CPU time limit exceeded|out of memory allocating|virtual memory exhausted|"
+    r"File size limit exceeded|Killed \(program"
 )
 """Compiler output that means a resource limit stopped it."""
 COMPILE_FAILED_MESSAGE: Final = "Your sketch did not compile."
