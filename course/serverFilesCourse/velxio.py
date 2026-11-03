@@ -32,11 +32,7 @@ def extract_sketch(encoded_project):
         raise ValueError("Expected one Arduino Uno.")
     groups = project.get("fileGroups")
     group_id = board.get("activeFileGroupId")
-    if (
-        not isinstance(groups, dict)
-        or len(groups) != 1
-        or not isinstance(group_id, str)
-    ):
+    if not isinstance(groups, dict) or len(groups) != 1 or not isinstance(group_id, str):
         raise ValueError("Expected one file group.")
     files = groups.get(group_id)
     if not isinstance(files, list) or len(files) != 1:
@@ -58,9 +54,7 @@ def parse(data):
     if not isinstance(submitted_files, list) or any(
         not isinstance(file, dict) for file in submitted_files
     ):
-        data["format_errors"].setdefault("_files", []).append(
-            "Invalid submitted files."
-        )
+        data["format_errors"].setdefault("_files", []).append("Invalid submitted files.")
         return
 
     # Discard any supplied or previously derived preview, even on invalid submissions.
@@ -86,6 +80,4 @@ def parse(data):
 
     pl.add_submitted_file(data, "sketch.ino", raw_contents=source)
     # Present the extracted sketch before the project snapshot.
-    data["submitted_answers"]["_files"].sort(
-        key=lambda file: file.get("name") != "sketch.ino"
-    )
+    data["submitted_answers"]["_files"].sort(key=lambda file: file.get("name") != "sketch.ino")

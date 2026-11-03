@@ -28,11 +28,7 @@ def request(path, payload=None, method=None, status=200):
     with response:
         raw = response.read()
         assert response.status == status, (path, response.status, raw)
-        return (
-            json.loads(raw)
-            if response.headers.get_content_type() == "application/json"
-            else raw
-        )
+        return json.loads(raw) if response.headers.get_content_type() == "application/json" else raw
 
 
 def main():

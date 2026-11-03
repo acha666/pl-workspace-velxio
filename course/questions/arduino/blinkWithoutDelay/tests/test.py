@@ -33,8 +33,7 @@ def test_blink(trace, check):
     edges = led.edges(start_ms=100)
     check(
         edges.match(range(HALF_PERIOD_MS, 2600, HALF_PERIOD_MS), tolerance_ms=TOLERANCE_MS),
-        "The LED should switch every 500 ms (within 20 ms). "
-        f"It switched at: {edges.describe()}.",
+        f"The LED should switch every 500 ms (within 20 ms). It switched at: {edges.describe()}.",
     )
 
 
