@@ -76,7 +76,7 @@ def describe(results):
         return "no result"
     if not results["gradable"]:
         return "ungradable"
-    return f"score {results['score']:.3f}"
+    return f"score {results['score']:.4f}"
 
 
 def main():
@@ -121,7 +121,7 @@ def main():
                 and abs(results["score"] - score) < 1e-9
             )
         failures += not passed
-        wanted = "ungradable" if score is None else f"score {score:.3f}"
+        wanted = "ungradable" if score is None else f"score {score:.4f}"
         print(
             f"{'ok  ' if passed else 'FAIL'} {case}: {describe(results)} (expected {wanted})"
         )
