@@ -109,9 +109,9 @@ jobs:
 
       - name: Grade template cases
         run: |
-          for expected in tests/grader/cases/*/*/expected.json; do
+          for expected in graders/arduino/tests/cases/*/*/expected.json; do
             cases="${expected%/expected.json}"
-            question="course/questions/${cases#tests/grader/cases/}"
+            question="course/questions/${cases#graders/arduino/tests/cases/}"
             python3 scripts/grade.py --image pl-arduino-grader:test --cases "$cases" "$question"
           done
 

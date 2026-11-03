@@ -60,7 +60,7 @@ def project(tmp_path, monkeypatch):
         "scripts",
         "tests",
         "course",
-        "grader",
+        "graders",
     ]:
         (root / directory).mkdir(parents=True)
     (root / "workspaces/arduino/patches/workspace.patch").write_bytes(patch)
@@ -80,9 +80,11 @@ def project(tmp_path, monkeypatch):
     for name in [
         "LICENSE",
         "SOURCE.md",
+        "pyproject.toml",
+        "uv.lock",
         "tests/answer.txt",
         "course/answer.txt",
-        "grader/answer.txt",
+        "graders/answer.txt",
     ]:
         (root / name).write_text(name + "\n")
     (root / "toolchain.lock.json").write_text(
@@ -132,7 +134,7 @@ def test_nested_checkout_applies_patch_and_distributed_source_rebuilds(
     with tarfile.open(output / "pl-adapter-source.tar.gz") as archive:
         names = archive.getnames()
         assert not any(
-            name.split("/")[0] in {"tests", "course", "grader"} for name in names
+            name.split("/")[0] in {"tests", "course", "graders"} for name in names
         )
         archive.extractall(distributed, filter="data")
     monkeypatch.setattr(prepare, "ROOT", distributed)
@@ -142,7 +144,7 @@ def test_nested_checkout_applies_patch_and_distributed_source_rebuilds(
         rebuilt / "upstream/frontend/example.txt"
     ).read_text() == "PrairieLearn patch applied.\n"
     assert (rebuilt / "upstream/frontend/workspace.ts").is_file()
-    for name in ["tests", "course", "grader"]:
+    for name in ["tests", "course", "graders"]:
         assert (output / name / "answer.txt").is_file()
         assert list((rebuilt / name).iterdir()) == []
 

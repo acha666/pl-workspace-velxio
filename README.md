@@ -24,7 +24,7 @@ The workspace saves automatically; once the save icon above its file list is gre
 
 Edit each question's prompt and `workspace/project.vlx` to customize it. Each workspace supports one Arduino Uno and one `sketch.ino`. Only core-provided libraries are available; the AVR core is preinstalled for offline compilation.
 
-`blinkWithoutDelay` is an autograded example whose `tests/test.py` defines the tests. See the [grader guide](grader/README.md) to write tests and to check them locally with `scripts/grade.py`. The grader does not support `analogWrite()` output yet.
+`blinkWithoutDelay` is an autograded example whose `tests/test.py` defines the tests. See the [grader guide](graders/arduino/README.md) to write tests and to check them locally with `scripts/grade.py`. The grader does not support `analogWrite()` output yet.
 
 ## Repository layout
 
@@ -32,13 +32,14 @@ Edit each question's prompt and `workspace/project.vlx` to customize it. Each wo
 | ---------------------- | ------------------------------------------------------------------------------- |
 | `toolchain.lock.json`  | Velxio revision and image, AVR core and simavr commit; checked against the Dockerfile |
 | `Dockerfile`           | Shared `toolchain` stage and the `workspace` and `grader` targets with their tests |
+| `pyproject.toml`, `uv.lock` | The [uv](https://docs.astral.sh/uv/) workspace: every grader under `graders/` is a member, with one lock file and shared lint settings |
 | `workspaces/arduino/`  | The Arduino workspace image: Velxio adapter, upstream patches, dependency locks, nginx, entrypoint and its image test |
-| `grader/`              | `avrsim` simavr runner and the `arduinograder` package                           |
+| `graders/arduino/`     | The Arduino grader: `avrsim` simavr runner, the `arduinograder` package (`src/`) and its tests |
 | `course/`              | Files to copy into a course: question templates and `velxio.py`                 |
 | `scripts/`             | `prepare.py` for the build context and `grade.py` for grading sketches          |
-| `tests/`               | Tests for the scripts, course templates and grader; see [tests](tests/README.md) |
+| `tests/`               | Tests for the scripts and course templates; see [tests](tests/README.md)        |
 
-Further workspace images go in `workspaces/<name>/`, each with its own Dockerfile targets.
+Further graders go in `graders/<name>/` as workspace members and further workspace images in `workspaces/<name>/`, each with its own Dockerfile targets.
 
 ## Build and test
 
@@ -52,10 +53,12 @@ docker build --target grader-test .build
 docker build --platform linux/amd64 --target workspace -t pl-workspace-velxio:arduino .build
 docker build --platform linux/amd64 --target grader -t pl-arduino-grader .build
 bash workspaces/arduino/tests/run.sh pl-workspace-velxio:arduino
-python3 scripts/grade.py --image pl-arduino-grader --cases tests/grader/cases/arduino/blinkWithoutDelay course/questions/arduino/blinkWithoutDelay
+python3 scripts/grade.py --image pl-arduino-grader --cases graders/arduino/tests/cases/arduino/blinkWithoutDelay course/questions/arduino/blinkWithoutDelay
 ```
 
 Use a fresh `--output` directory when preparing again. Tests run in containers and cover saves, compilation, templates and Chromium through a PrairieLearn-style proxy, the grader package, and the template cases under production grader limits. The grader targets also build from the repository root (`docker build --target grader .`), which is quicker while working on the grader.
+
+The grader's Python code is developed with [uv](https://docs.astral.sh/uv/): `cd graders/arduino && uv sync` creates the environment, and `uv run ruff check .`, `uv run mypy` and `uv run pytest` lint, type-check and test it. Tests that compile or simulate are skipped unless `arduino-cli` and `avrsim` are installed, so run `docker build --target grader-test .` for the full suite. `grader-test` runs the same three commands.
 
 ## Docker Hub releases
 

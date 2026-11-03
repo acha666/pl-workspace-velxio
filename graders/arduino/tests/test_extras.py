@@ -5,7 +5,8 @@ import pytest
 
 from arduinograder import Scenario, StopGrading
 from arduinograder.extras import Segment as S
-from arduinograder.extras import SevenSegment, find_calls, forbid_calls
+from arduinograder.extras import SevenSegment, find_calls, forbid_calls, no_calls
+from conftest import SimulateFn
 
 COUNTER = """
 const int SEG_PINS[7] = {2, 3, 4, 5, 6, 7, 8};
@@ -33,7 +34,7 @@ void loop() {
 """
 
 
-def test_core_package_does_not_load_the_extras():
+def test_core_package_does_not_load_the_extras() -> None:
     check = (
         "import sys, arduinograder; "
         "assert not {'arduinograder.extras', 'tree_sitter'} & set(sys.modules)"
@@ -41,7 +42,7 @@ def test_core_package_does_not_load_the_extras():
     subprocess.run([sys.executable, "-c", check], check=True)
 
 
-def test_find_calls_ignores_comments_strings_and_other_names():
+def test_find_calls_ignores_comments_strings_and_other_names() -> None:
     source = (
         "void loop() {\n"
         "  // delay(100) in a comment\n"
@@ -59,12 +60,12 @@ def test_find_calls_ignores_comments_strings_and_other_names():
     assert [call.line for call in find_calls(source, ["delayMicroseconds"])] == [6]
 
 
-def test_find_calls_line_numbers_survive_unusual_line_breaks():
+def test_find_calls_line_numbers_survive_unusual_line_breaks() -> None:
     source = "int a; /* \x0c form feed */\r\nvoid loop() {\r\n  delay(1);\r\n}\r\n"
     assert [call.line for call in find_calls(source, ["delay"])] == [3]
 
 
-def test_forbid_calls_stops_grading_and_lists_the_calls():
+def test_forbid_calls_stops_grading_and_lists_the_calls() -> None:
     source = "void loop() {\n  delay(5);\n  delayMicroseconds(1);\n}\n"
     with pytest.raises(StopGrading) as stopped:
         forbid_calls(source, "delay", "delayMicroseconds")
@@ -75,10 +76,17 @@ def test_forbid_calls_stops_grading_and_lists_the_calls():
     forbid_calls(source, "tone")
 
 
-def test_seven_segment_gives_lit_segments_from_the_trace(simulate):
+def test_no_calls_is_a_gate_on_the_source() -> None:
+    gate = no_calls("delay")
+    assert gate("void loop() {}") is None
+    with pytest.raises(StopGrading, match="calls delay\\(\\)"):
+        gate("void loop() { delay(1); }")
+
+
+def test_seven_segment_gives_lit_segments_from_the_trace(simulate: SimulateFn) -> None:
     scenario = Scenario(duration_ms=400)
     for at_ms in (100, 200, 300):
-        scenario.press(11, at_ms=at_ms, hold_ms=20)
+        scenario.pulse(11, 1, at_ms=at_ms, duration_ms=20)
     trace = simulate(COUNTER, scenario)
     display = SevenSegment([2, 3, 4, 5, 6, 7, 8, 9])
     assert [display.segments(trace, at_ms=t) for t in (50, 150, 250, 350)] == [
@@ -97,7 +105,7 @@ def test_seven_segment_gives_lit_segments_from_the_trace(simulate):
         SevenSegment([2, 3, 4, 5, 6, 7, 8])
 
 
-def test_segments_match_arduino_digit_bytes_and_read_for_students():
+def test_segments_match_arduino_digit_bytes_and_read_for_students() -> None:
     assert S(0x3F) == S.A | S.B | S.C | S.D | S.E | S.F
     assert S(0x86) == S.B | S.C | S.DP
     assert (S(0x86) & ~S.DP) == S.B | S.C

@@ -85,14 +85,15 @@ def main():
             ROOT / "workspaces/arduino/dependencies/backend-constraints.txt",
             source / "backend/constraints.txt",
         )
-        shutil.copy2(ROOT / "Dockerfile", context / "Dockerfile")
+        for name in ["Dockerfile", "pyproject.toml", "uv.lock"]:
+            shutil.copy2(ROOT / name, context / name)
         for name in ["scripts", "workspaces"]:
             shutil.copytree(ROOT / name, context / name)
-        for name in ["grader", "course", "tests"]:
+        for name in ["graders", "course", "tests"]:
             if (ROOT / name).is_dir():
                 shutil.copytree(ROOT / name, context / name)
             else:
-                # The workspace's downloadable source excludes the grader,
+                # The workspace's downloadable source excludes the graders,
                 # course files and instructor fixtures, which only the grader
                 # and test targets need.
                 (context / name).mkdir()
@@ -102,6 +103,8 @@ def main():
             for name in [
                 "workspaces",
                 "Dockerfile",
+                "pyproject.toml",
+                "uv.lock",
                 "scripts",
                 "toolchain.lock.json",
                 "LICENSE",

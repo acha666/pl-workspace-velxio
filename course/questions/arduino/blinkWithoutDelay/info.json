@@ -12,7 +12,6 @@
   },
   "externalGradingOptions": {
     "image": "acha666/pl-workspace-velxio:arduino-grader-2.0.0",
-    "entrypoint": "python3 /grade/tests/test.py",
     "timeout": 60
   },
   "topic": "Arduino"

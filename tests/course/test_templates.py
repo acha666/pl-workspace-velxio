@@ -171,10 +171,9 @@ class TemplateTests(unittest.TestCase):
                 repository, _, version = workspace.rpartition(":arduino-workspace-")
                 self.assertTrue(repository and version)
                 self.assertEqual(grader, f"{repository}:arduino-grader-{version}")
-                self.assertEqual(
-                    info["externalGradingOptions"]["entrypoint"],
-                    "python3 /grade/tests/test.py",
-                )
+                # The image's entrypoint grades with tests/test.py; a template
+                # relies on it so that upgrading the image is a version change only.
+                self.assertNotIn("entrypoint", info["externalGradingOptions"])
                 self.assertTrue((question / "tests/test.py").is_file())
 
     def test_seven_segment_connections_have_individual_current_limiting_resistors(self):

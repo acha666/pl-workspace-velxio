@@ -2,11 +2,32 @@
 
 ## Unreleased
 
-The workspace image is unchanged apart from where its sources live.
+The grader's test API is redesigned, and the repository is laid out for more than one grader and workspace image. The workspace image is unchanged apart from where its sources live.
+
+### Upgrading from 2.0.0
+
+- Rewrite each question's `tests/test.py` as test functions: the `ArduinoGrader` class with `tests()`, `self.test()`, `self.compile()` and `self.simulate()` is removed. `course/questions/arduino/blinkWithoutDelay/tests/test.py` shows the conversion.
+- Remove `entrypoint` from `externalGradingOptions`. The image's entrypoint, `python3 -m arduinograder`, grades with `/grade/tests/test.py`.
+- `trace.state(pin, at_ms)` becomes `trace.pin(pin).at(ms)`, which returns a `PinState` instead of a string; `trace.level()` and `trace.changes()` move to `trace.pin(pin)` as well, and `trace.serial_text()` and `serial_lines()` become `trace.serial.text()` and `.lines()`.
+- `Scenario.press()` becomes `pulse()`, and `forbid_calls()` at the start of `tests()` becomes `gates = [no_calls(...)]`.
+
+### Grader
+
+- Tests are functions decorated with `@ag.points()` that receive fixtures such as `trace`, `simulate`, `session`, `check` and `source` by naming them as parameters. Each test runs on its own, so an error fails only that test; returning a number from 0 to 1, such as `check.fraction`, gives partial credit. `gates` and `@ag.gate` functions run first and can stop grading with zero points.
+- The `session` fixture runs the sketch step by step, so a test can react to it: `wait_for()` a pin change or `wait_for_line()` from Serial, then `pulse()`, `set()`, `analog()` or `send()`. Waits hand out what the program did in order, at once when it has already happened, so a reaction during a `pulse()` is not missed and a line printed before an input is not taken for its reply. `avrsim` is now a long-running process driven over stdin and stdout.
+- `pulse(pin, level, ...)` drives a pin and then releases it, and `release(pin)` releases it alone. A released pin reads like an unconnected one, HIGH under `INPUT_PULLUP` and LOW without it, so a test can catch a missing pull-up. `Scenario.send()` writes to the sketch's Serial at one byte per millisecond.
+- `Trace` is typed: `PinState` has `.is_high`, `.is_output` and `.level`; `trace.pin(13).edges()` lists output level flips with `.match()`, `.periodic()` and `.describe()`; `.high_fraction()` and `.stable()` summarise intervals; `trace.serial.lines()` and `.text()` accept time windows.
+- `--sketch FILE` grades a local file and prints the results, with `python3 -m arduinograder` or a test file ending in `ag.main()`.
+- The compiler and simulator run under per-process limits on CPU time, memory and file size, without supplementary groups; a compilation that hits a limit scores 0 with an explanation, and the compiler stops after 20 errors. The grader refuses to grade unless it can hand compiling and simulating to the sandbox user, and a spent time budget stops the simulator at once.
+
+### Questions
+
+- `blinkWithoutDelay` uses the new API and no longer sets `entrypoint`.
 
 ### Repository
 
-- The Arduino workspace sources are in `workspaces/arduino/`, with the workspace image test beside them; `tests/` keeps the script, course template and grader tests.
+- The Arduino grader is in `graders/arduino/` and the Arduino workspace sources in `workspaces/arduino/`, each with its tests and, for the grader, its regression cases; `tests/` keeps the script and course template tests.
+- `graders/*` are members of a [uv](https://docs.astral.sh/uv/) workspace with one `uv.lock`, from which the grader image installs `arduinograder`. The package is split by responsibility (`rubric`, `grading`, `sim`, `sandbox`, `toolchain`, `pl`, `cli`), fully typed with Google-style docstrings, and `grader-test` runs ruff, `mypy --strict` and pytest.
 
 ## 2.0.0 — 2026-10-20
 

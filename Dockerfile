@@ -87,8 +87,8 @@ WORKDIR /app
 ENTRYPOINT ["/app/pl-entrypoint.sh"]
 
 # ---------------------------------------------------------------------------
-# Grader: avrsim (simavr) and the arduinograder Python package. Builds from the
-# repository root or the prepared context.
+# Arduino grader: avrsim (simavr) and the arduinograder package, installed from
+# the uv workspace lock. Builds from the repository root or the prepared context.
 
 FROM python:3.12-slim-bookworm AS simavr
 ARG SIMAVR_COMMIT
@@ -100,29 +100,45 @@ RUN git init --quiet simavr \
     && git -C simavr fetch --quiet --depth 1 https://github.com/buserror/simavr.git "$SIMAVR_COMMIT" \
     && git -C simavr checkout --quiet --detach FETCH_HEAD \
     && make -C simavr/simavr RELEASE=1 libsimavr
-COPY grader/avrsim/avrsim.c avrsim.c
+COPY graders/arduino/avrsim/avrsim.c avrsim.c
 RUN gcc -O2 -Wall -Wextra -Werror -o /usr/local/bin/avrsim avrsim.c \
         -I simavr/simavr/sim simavr/simavr/obj-*/libsimavr.a -lelf
 
 FROM toolchain AS grader
+COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /usr/local/bin/uv
 RUN apt-get update && apt-get install -y --no-install-recommends libelf1 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 1002 sbuser \
     && useradd --uid 1002 --gid 1002 --no-create-home --home-dir /nonexistent sbuser
-COPY grader/requirements.txt /opt/arduinograder/requirements.txt
-RUN pip install --no-cache-dir -r /opt/arduinograder/requirements.txt
 COPY --from=simavr /usr/local/bin/avrsim /usr/local/bin/avrsim
-COPY grader/arduinograder/ /opt/arduinograder/arduinograder/
-ENV PYTHONPATH=/opt/arduinograder:/grade/serverFilesCourse \
+# The package and its dependencies go into one environment outside the source
+# tree; dependencies are installed before the source so they cache separately.
+ENV UV_PROJECT_ENVIRONMENT=/opt/arduinograder \
+    UV_LINK_MODE=copy \
+    UV_NO_CACHE=1 \
+    UV_PYTHON_DOWNLOADS=never
+WORKDIR /src
+COPY pyproject.toml uv.lock ./
+COPY graders/arduino/pyproject.toml graders/arduino/README.md graders/arduino/
+RUN uv sync --frozen --no-dev --package arduinograder --no-install-workspace
+COPY graders/arduino/src/ graders/arduino/src/
+RUN uv sync --frozen --no-dev --package arduinograder --no-editable
+ENV PATH=/opt/arduinograder/bin:/usr/local/bin:/usr/bin:/bin \
+    PYTHONPATH=/grade/serverFilesCourse \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 LABEL org.opencontainers.image.title="PrairieLearn Arduino grader" \
       org.opencontainers.image.licenses="AGPL-3.0-only"
 WORKDIR /grade
-ENTRYPOINT ["python3", "/grade/tests/test.py"]
+ENTRYPOINT ["python3", "-m", "arduinograder"]
 
 FROM grader AS grader-test
-RUN pip install --no-cache-dir pytest==8.3.5
-COPY tests/grader/ /tests/grader/
-COPY course/ /course/
-RUN python -m pytest -q -p no:cacheprovider /tests/grader
+WORKDIR /src
+RUN uv sync --frozen --package arduinograder --no-editable
+COPY graders/arduino/tests/ graders/arduino/tests/
+COPY course/ course/
+WORKDIR /src/graders/arduino
+RUN uv run --frozen --no-sync ruff check . \
+    && uv run --frozen --no-sync ruff format --check . \
+    && uv run --frozen --no-sync mypy \
+    && uv run --frozen --no-sync pytest -q

@@ -23,9 +23,12 @@ def docker(*args, **kwargs):
 
 def grade(question, image, sketch, name):
     options = json.loads((question / "info.json").read_text())["externalGradingOptions"]
-    entrypoint = options.get("entrypoint", "python3 /grade/tests/test.py")
+    # The image's own entrypoint applies, as in PrairieLearn, unless the question sets one.
+    entrypoint = options.get("entrypoint")
     if isinstance(entrypoint, str):
         entrypoint = shlex.split(entrypoint)
+    entrypoint_option = ["--entrypoint", entrypoint[0]] if entrypoint else []
+    command = entrypoint[1:] if entrypoint else []
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
         files = root / "grade"
@@ -38,7 +41,7 @@ def grade(question, image, sketch, name):
         # a directory that the root-run grader would chmod.
         container = docker(
             "create", "--network", "none", "--cpus", "0.9", "--memory", "2g",
-            "--entrypoint", entrypoint[0], image, *entrypoint[1:],
+            *entrypoint_option, image, *command,
             capture_output=True, text=True,
         ).stdout.strip()  # fmt: skip
         try:
