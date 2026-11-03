@@ -428,13 +428,13 @@ class Trace:
                 return f"The program crashed at {at}, so the simulation stopped."
             case "pin-limit":
                 return (
-                    f"The simulation stopped at {at} because the program changed its pins "
-                    f"more than {self.max_pin_changes} times."
+                    f"The simulation stopped at {at} because the program had changed its pins "
+                    f"{self.max_pin_changes} times, the limit for this question."
                 )
             case "serial-limit":
                 return (
-                    f"The simulation stopped at {at} because the program printed more than "
-                    f"{self.max_serial_bytes} bytes on Serial."
+                    f"The simulation stopped at {at} because the program had printed "
+                    f"{self.max_serial_bytes} bytes on Serial, the limit for this question."
                 )
             case never:
                 assert_never(never)
