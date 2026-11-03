@@ -95,6 +95,22 @@ def test_results_with_nan_are_written_as_ungradable(
     assert "ValueError" in capsys.readouterr().err
 
 
+def test_an_unguarded_main_in_the_test_file_grades_once(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    grade_dir = tmp_path / "grade"
+    (grade_dir / "tests").mkdir(parents=True)
+    (grade_dir / "tests/test.py").write_text(
+        "import arduinograder as ag\n@ag.points(1)\ndef test_a(source): assert 'loop' in source\n"
+        "ag.main()\n"
+    )
+    sketch = tmp_path / "attempt.ino"
+    sketch.write_text("void loop() {}")
+    work = ["--work-dir", str(tmp_path / "work")]
+    assert cli.main(["--grade-dir", str(grade_dir), *work, "--sketch", str(sketch)]) == 0
+    assert json.loads(capsys.readouterr().out)["score"] == 1.0
+
+
 def test_loading_a_test_module_works_like_running_it(tmp_path: Path) -> None:
     tests = tmp_path / "tests"
     tests.mkdir()
