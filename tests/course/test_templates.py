@@ -45,10 +45,34 @@ class SubmissionTests(unittest.TestCase):
             (QUESTIONS / "blink/workspace/project.vlx").read_text()
         )
 
-    def submit(self, files):
-        data = {"submitted_answers": {"_files": files}, "format_errors": {}}
+    def submit(self, files, raw=None):
+        data = {
+            "submitted_answers": {"_files": files},
+            "raw_submitted_answers": raw or {},
+            "format_errors": {},
+        }
         velxio.parse(data)
         return data
+
+    def test_files_supplied_by_the_client_are_rejected(self):
+        # PrairieLearn adds _files after copying the request into raw_submitted_answers,
+        # so a request carrying its own could get another sketch graded than the
+        # project's: "./sketch.ino" lands on the same path and overwrites it, and a
+        # project of the client's own is kept when the workspace was never opened.
+        project_file = {"name": "project.vlx", "contents": encode(self.project)}
+        forged = {"name": "./sketch.ino", "contents": base64.b64encode(b"forged").decode()}
+        for files, raw in [
+            ([forged, project_file], {"_files": [forged]}),
+            ([project_file], {"_files": [project_file]}),
+            ([forged, project_file], {}),
+            ([{"name": "notes.txt", "contents": ""}, project_file], {}),
+        ]:
+            with self.subTest(files=files, raw=raw):
+                data = self.submit(files, raw)
+                self.assertIn("_files", data["format_errors"])
+                self.assertNotIn(
+                    "sketch.ino", [file["name"] for file in data["submitted_answers"]["_files"]]
+                )
 
     def test_preview_comes_from_snapshot_and_replaces_supplied_source(self):
         source = "// Saved snapshot: café\r\nvoid setup() {}\r\nvoid loop() {}\n"
