@@ -280,3 +280,10 @@ def test_each_compilation_keeps_its_own_firmware(toolchain: tuple[Compiler, Simu
     assert blink.path != quiet.path
     assert simulator.run(blink, Scenario(duration_ms=1200)).pin(13).edges()
     assert not simulator.run(quiet, Scenario(duration_ms=1200)).pin(13).edges()
+
+
+def test_a_timed_out_wait_leaves_the_changes_for_a_later_one(session: SessionFn) -> None:
+    with session(BLINK) as run:
+        run.run_until(100)
+        assert run.wait_for(13, "INPUT", timeout_ms=600) is None
+        assert run.wait_for(13, "HIGH", timeout_ms=0) == pytest.approx(500, abs=1)

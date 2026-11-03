@@ -303,7 +303,8 @@ class Session:
                 if record.cycle and (record.kind, record.key) == (kind, key) and matches(record):
                     self._consumed[(kind, key)] = index + 1
                     return record
-            self._consumed[(kind, key)] = len(self._records)
+            # Records that did not match stay unreturned: a later wait for
+            # another state may return them.
             if self._run(deadline, watch=(kind, key)) != "watched":
                 return None
 
