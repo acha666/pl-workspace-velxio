@@ -1,0 +1,351 @@
+{
+  "format": "velxio-project",
+  "version": 1,
+  "exportedAt": "2026-11-03T00:00:00.000Z",
+  "name": "Arduino: Mode switch",
+  "boards": [
+    {
+      "id": "arduino-uno",
+      "name": "Arduino Uno",
+      "boardKind": "arduino-uno",
+      "x": 80,
+      "y": 140,
+      "activeFileGroupId": "group-arduino-uno",
+      "languageMode": "arduino",
+      "serialBaudRate": 9600,
+      "libraries": []
+    }
+  ],
+  "fileGroups": {
+    "group-arduino-uno": [
+      {
+        "name": "sketch.ino",
+        "content": "// Mode switch: a button cycles through modes shown on three LEDs.\nconst int buttonPin = 2;             // to ground: INPUT_PULLUP, LOW while pressed\nconst int ledPins[3] = {13, 9, 7};   // modes 1, 2 and 3\nconst int potPin = A0;               // sets the blink period in mode 3\n\nconst unsigned long debounceMs = 30; // a level counts once it has held this long\nconst unsigned long holdMs = 1000;   // holding the button this long returns to mode 0\n\nint mode = 0;\n\nvoid setMode(int newMode) {\n  // TODO: Switch to newMode: light its LED only, and print \"mode N\" on Serial.\n}\n\nvoid setup() {\n  // TODO: Configure the pins, start Serial at 9600 baud and print \"ready\".\n}\n\nvoid loop() {\n  // TODO: Debounce the button. A click (released within a second) moves to the\n  // next mode and 3 wraps to 0; a press held for a second returns to mode 0 at\n  // once, and its release does nothing more.\n  // TODO: Read \"mode N\" lines from Serial and switch to that mode.\n  // TODO: In mode 3, blink the LED with a period from the potentiometer:\n  // 100 ms at 0 to 1000 ms at 1023, read continuously. Do not call delay().\n}\n"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "button",
+      "metadataId": "pushbutton",
+      "x": 470,
+      "y": 40,
+      "properties": {
+        "color": "green",
+        "pressed": false,
+        "label": "",
+        "xray": false
+      }
+    },
+    {
+      "id": "resistor_1",
+      "metadataId": "resistor",
+      "x": 470,
+      "y": 180,
+      "properties": {
+        "value": "220",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "led_1",
+      "metadataId": "led",
+      "x": 600,
+      "y": 160,
+      "properties": {
+        "color": "red"
+      }
+    },
+    {
+      "id": "resistor_2",
+      "metadataId": "resistor",
+      "x": 470,
+      "y": 240,
+      "properties": {
+        "value": "220",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "led_2",
+      "metadataId": "led",
+      "x": 600,
+      "y": 220,
+      "properties": {
+        "color": "green"
+      }
+    },
+    {
+      "id": "resistor_3",
+      "metadataId": "resistor",
+      "x": 470,
+      "y": 300,
+      "properties": {
+        "value": "220",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "led_3",
+      "metadataId": "led",
+      "x": 600,
+      "y": 280,
+      "properties": {
+        "color": "yellow"
+      }
+    },
+    {
+      "id": "pot",
+      "metadataId": "potentiometer",
+      "x": 470,
+      "y": 360,
+      "properties": {
+        "min": 0,
+        "max": 1023,
+        "value": 512,
+        "step": 1
+      }
+    }
+  ],
+  "wires": [
+    {
+      "id": "button_pin",
+      "start": {
+        "componentId": "arduino-uno",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "button",
+        "pinName": "1.l",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#4488ff",
+      "waypoints": []
+    },
+    {
+      "id": "button_ground",
+      "start": {
+        "componentId": "button",
+        "pinName": "2.l",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "arduino-uno",
+        "pinName": "GND.1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#000000",
+      "waypoints": []
+    },
+    {
+      "id": "led_1_pin",
+      "start": {
+        "componentId": "arduino-uno",
+        "pinName": "13",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "resistor_1",
+        "pinName": "1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#ff4444",
+      "waypoints": []
+    },
+    {
+      "id": "led_1_anode",
+      "start": {
+        "componentId": "resistor_1",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "led_1",
+        "pinName": "A",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#ff4444",
+      "waypoints": []
+    },
+    {
+      "id": "led_1_cathode",
+      "start": {
+        "componentId": "led_1",
+        "pinName": "C",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "arduino-uno",
+        "pinName": "GND.2",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#000000",
+      "waypoints": []
+    },
+    {
+      "id": "led_2_pin",
+      "start": {
+        "componentId": "arduino-uno",
+        "pinName": "9",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "resistor_2",
+        "pinName": "1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#44bb44",
+      "waypoints": []
+    },
+    {
+      "id": "led_2_anode",
+      "start": {
+        "componentId": "resistor_2",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "led_2",
+        "pinName": "A",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#44bb44",
+      "waypoints": []
+    },
+    {
+      "id": "led_2_cathode",
+      "start": {
+        "componentId": "led_2",
+        "pinName": "C",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "arduino-uno",
+        "pinName": "GND.2",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#000000",
+      "waypoints": []
+    },
+    {
+      "id": "led_3_pin",
+      "start": {
+        "componentId": "arduino-uno",
+        "pinName": "7",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "resistor_3",
+        "pinName": "1",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#e0b000",
+      "waypoints": []
+    },
+    {
+      "id": "led_3_anode",
+      "start": {
+        "componentId": "resistor_3",
+        "pinName": "2",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "led_3",
+        "pinName": "A",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#e0b000",
+      "waypoints": []
+    },
+    {
+      "id": "led_3_cathode",
+      "start": {
+        "componentId": "led_3",
+        "pinName": "C",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "arduino-uno",
+        "pinName": "GND.2",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#000000",
+      "waypoints": []
+    },
+    {
+      "id": "pot_vcc",
+      "start": {
+        "componentId": "pot",
+        "pinName": "VCC",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "arduino-uno",
+        "pinName": "5V",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#ff4444",
+      "waypoints": []
+    },
+    {
+      "id": "pot_signal",
+      "start": {
+        "componentId": "pot",
+        "pinName": "SIG",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "arduino-uno",
+        "pinName": "A0",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#aa44ff",
+      "waypoints": []
+    },
+    {
+      "id": "pot_ground",
+      "start": {
+        "componentId": "pot",
+        "pinName": "GND",
+        "x": 0,
+        "y": 0
+      },
+      "end": {
+        "componentId": "arduino-uno",
+        "pinName": "GND.3",
+        "x": 0,
+        "y": 0
+      },
+      "color": "#000000",
+      "waypoints": []
+    }
+  ],
+  "activeBoardId": "arduino-uno"
+}

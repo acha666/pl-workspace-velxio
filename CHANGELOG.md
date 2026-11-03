@@ -22,6 +22,7 @@ The grader's test API is redesigned, and the repository is laid out for more tha
 
 ### Questions
 
+- New `modeSwitch` autograded template: a debounced button cycles modes shown on three LEDs, a long press returns to mode 0, `mode N` on Serial sets a mode, and a potentiometer sets the blink period of mode 3. Its tests combine `session` reactions with `trace` checks.
 - `blinkWithoutDelay` uses the new API and no longer sets `entrypoint`.
 
 ### Repository

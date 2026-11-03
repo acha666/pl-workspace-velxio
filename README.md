@@ -24,7 +24,7 @@ The workspace saves automatically; once the save icon above its file list is gre
 
 Edit each question's prompt and `workspace/project.vlx` to customize it. Each workspace supports one Arduino Uno and one `sketch.ino`. Only core-provided libraries are available; the AVR core is preinstalled for offline compilation.
 
-`blinkWithoutDelay` is an autograded example whose `tests/test.py` defines the tests. See the [grader guide](graders/arduino/README.md) to write tests and to check them locally with `scripts/grade.py`. The grader does not support `analogWrite()` output yet.
+`blinkWithoutDelay` and `modeSwitch` are autograded examples whose `tests/test.py` defines the tests; `modeSwitch` reacts to the running sketch with button presses, serial input and a potentiometer. See the [grader guide](graders/arduino/README.md) to write tests and to check them locally with `scripts/grade.py`. The grader does not support `analogWrite()` output yet.
 
 ## Repository layout
 
