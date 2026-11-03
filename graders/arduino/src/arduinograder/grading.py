@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import sys
 import traceback
 from functools import cached_property
 from pathlib import Path
@@ -199,6 +200,10 @@ class Grading:
 def load_module(path: str | os.PathLike[str]) -> ModuleType:
     """Import a test module from its file path.
 
+    As when the file is run directly, the module is registered in
+    ``sys.modules`` and its directory is put on ``sys.path``, so dataclasses
+    in it and helper modules next to it work.
+
     Raises:
         ImportError: If the file cannot be loaded as a module.
     """
@@ -207,6 +212,9 @@ def load_module(path: str | os.PathLike[str]) -> ModuleType:
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot load the test module {path}")
     module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    if str(path.parent) not in sys.path:
+        sys.path.insert(0, str(path.parent))
     spec.loader.exec_module(module)
     return module
 

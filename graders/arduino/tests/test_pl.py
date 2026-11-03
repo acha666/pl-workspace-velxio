@@ -81,3 +81,22 @@ def test_main_defaults_to_the_tests_under_the_grading_directory(
     assert json.loads(capsys.readouterr().out)["score"] == 1.0
     with pytest.raises(SystemExit):
         cli.main(["--grade-dir", str(tmp_path / "elsewhere"), *work, "--sketch", str(sketch)])
+
+
+def test_loading_a_test_module_works_like_running_it(tmp_path: Path) -> None:
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    (tests / "helpers.py").write_text("PIN = 13\n")
+    (tests / "test.py").write_text(
+        "from __future__ import annotations\n"
+        "from dataclasses import dataclass\n"
+        "import arduinograder as ag\n"
+        "from helpers import PIN\n"
+        "@dataclass\n"
+        "class Pins:\n"
+        "    led: int = PIN\n"
+        "@ag.points(1)\n"
+        "def test_led(source): assert Pins().led == 13\n"
+    )
+    module = grading.load_module(tests / "test.py")
+    assert [item.name for item in rubric.collect(module)[1]] == ["Led"]
