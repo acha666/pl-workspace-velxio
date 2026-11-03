@@ -20,6 +20,19 @@ from .rubric import ItemResult, TestResultDict
 
 GRADE_DIR: Final = Path("/grade")
 """PrairieLearn's grading directory inside the container."""
+MAX_MESSAGE_CHARS: Final = 8000
+"""Characters kept of each test's message and of the overall one.
+
+PrairieLearn rejects results over 1 MiB, and a message that echoes what a
+sketch did can grow without bound.
+"""
+
+
+def _clip(text: str) -> str:
+    """Return ``text`` cut to ``MAX_MESSAGE_CHARS``, saying so when it was."""
+    if len(text) <= MAX_MESSAGE_CHARS:
+        return text
+    return text[:MAX_MESSAGE_CHARS] + "\n[message truncated]"
 
 
 class ResultsDict(TypedDict):
@@ -141,12 +154,15 @@ class Results:
         return sum(item.points for item in self.items) / total
 
     def to_dict(self) -> ResultsDict:
-        """Return the ``results.json`` content."""
+        """Return the ``results.json`` content, with messages clipped to ``MAX_MESSAGE_CHARS``."""
+        tests = [item.to_dict() for item in self.items]
+        for test in tests:
+            test["message"] = _clip(test["message"])
         return {
             "gradable": self.gradable,
             "score": self.score,
-            "message": self.message,
-            "tests": [item.to_dict() for item in self.items],
+            "message": _clip(self.message),
+            "tests": tests,
         }
 
     def write(self, grade_dir: str | os.PathLike[str]) -> None:

@@ -147,3 +147,12 @@ def test_reason_words_match_the_avrsim_protocol() -> None:
         runner._as_run_reason("vanished")
     assert as_stop_reason("reached") == "end"
     assert as_stop_reason("pin-limit") == "pin-limit"
+
+
+def test_describe_lists_only_the_first_edges() -> None:
+    records = "".join(f"P {16000 * (i + 1)} 13 {'H' if i % 2 == 0 else 'L'}\n" for i in range(40))
+    trace = Trace.from_text("P 0 13 I\nP 8000 13 L\n" + records + "T 1600000 reached")
+    edges = trace.pin(13).edges()
+    assert len(edges) == 40
+    described = edges.describe()
+    assert described.endswith(", and 15 more") and described.count(" ms") == 25

@@ -95,6 +95,17 @@ def test_results_with_nan_are_written_as_ungradable(
     assert "ValueError" in capsys.readouterr().err
 
 
+def test_long_messages_are_clipped() -> None:
+    results = Results()
+    results.add(ItemResult("Long", 0, 1, message="x" * 20_000))
+    results.add_message("y" * 20_000)
+    written = results.to_dict()
+    assert len(written["tests"][0]["message"]) < pl.MAX_MESSAGE_CHARS + 100
+    assert written["tests"][0]["message"].endswith("[message truncated]")
+    assert written["message"].endswith("[message truncated]")
+    assert Results().to_dict()["message"] == ""
+
+
 def test_an_unguarded_main_in_the_test_file_grades_once(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

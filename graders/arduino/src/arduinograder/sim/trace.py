@@ -13,6 +13,8 @@ from ..board import NUM_PINS, Level, PinLike, pin_name, pin_number, to_cycles, t
 StopReason: TypeAlias = Literal["end", "done", "crashed", "pin-limit", "serial-limit"]
 """Why a trace ends: ``"end"`` for a scenario run to completion, else early."""
 STOP_REASONS: Final[frozenset[str]] = frozenset(get_args(StopReason))
+MAX_DESCRIBED: Final = 25
+"""Edge times ``Edges.describe()`` lists at most."""
 RecordKind: TypeAlias = Literal["P", "S"]
 """The kinds of record avrsim reports: ``"P"`` for a pin state, ``"S"`` for a Serial byte."""
 
@@ -160,8 +162,15 @@ class Edges(list[Edge]):
         )
 
     def describe(self) -> str:
-        """Return the edge times for a message: ``"500 ms, 1000 ms"``, or ``"never"``."""
-        return ", ".join(f"{edge.time_ms:.0f} ms" for edge in self) or "never"
+        """Return the edge times for a message: ``"500 ms, 1000 ms"``, or ``"never"``.
+
+        A pin that flips without end would make an endless message, so only
+        the first ``MAX_DESCRIBED`` times are listed, then how many follow.
+        """
+        times = [f"{edge.time_ms:.0f} ms" for edge in self[:MAX_DESCRIBED]]
+        if len(self) > MAX_DESCRIBED:
+            times.append(f"and {len(self) - MAX_DESCRIBED} more")
+        return ", ".join(times) or "never"
 
 
 class PinTrace:
