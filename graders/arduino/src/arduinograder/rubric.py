@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from types import FunctionType, ModuleType
 from typing import Final, Protocol, TypeAlias, TypedDict, TypeVar
 
-from .errors import StopGrading, Ungradable
+from .errors import ConfigurationError, StopGrading, Ungradable
 from .sim import Scenario, SimulationStopped
 
 GRADER_ERROR_MESSAGE: Final = (
@@ -286,9 +286,10 @@ def run_gate(func: TestFunction, resolve: Resolver) -> None:
 def run_item(item: Item, resolve: Resolver) -> ItemResult:
     """Run one test on its own.
 
-    ``StopGrading`` and ``Ungradable`` propagate; any other exception fails
-    only this test. A failing assert's message, a ``SimulationStopped``
-    explanation and every failed check are reported to the student.
+    ``StopGrading``, ``Ungradable`` and ``ConfigurationError`` propagate; any
+    other exception fails only this test. A failing assert's message, a
+    ``SimulationStopped`` explanation and every failed check are reported to
+    the student.
 
     Args:
         item: The test to run.
@@ -305,7 +306,7 @@ def run_item(item: Item, resolve: Resolver) -> ItemResult:
     try:
         outcome = call_with_fixtures(item.func, resolve_for_item)
         fraction = _fraction(outcome, check)
-    except (StopGrading, Ungradable):
+    except (StopGrading, Ungradable, ConfigurationError):
         raise
     except AssertionError as error:
         check.fail(str(error) or "A check failed.")

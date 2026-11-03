@@ -16,7 +16,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Final
 
-from .errors import INTERNAL_ERROR_MESSAGE, StopGrading, Ungradable
+from .errors import INTERNAL_ERROR_MESSAGE, ConfigurationError, StopGrading, Ungradable
 from .pl import GRADE_DIR, Results, Submission, protect
 from .rubric import Item, collect, run_gate, run_item
 from .sandbox import SANDBOX_USER, Budget, Sandbox
@@ -101,10 +101,10 @@ class Grading:
         """The directory of the test module, for reference files kept next to it.
 
         Raises:
-            LookupError: If the module was not loaded from a file.
+            ConfigurationError: If the module was not loaded from a file.
         """
         if not self.module.__file__:
-            raise LookupError("The test module has no file, so there is no tests_dir.")
+            raise ConfigurationError("The test module has no file, so there is no tests_dir.")
         return Path(self.module.__file__).parent
 
     @cached_property
@@ -144,12 +144,12 @@ class Grading:
                 for a gate.
 
         Raises:
-            LookupError: If there is no such fixture.
+            ConfigurationError: If there is no such fixture.
         """
         if name == "trace":
             return self.simulate(self._scenario_for(item))
         if name not in FIXTURE_NAMES:
-            raise LookupError(f"There is no fixture named {name!r}.")
+            raise ConfigurationError(f"There is no fixture named {name!r}.")
         return getattr(self, name)
 
     def _scenario_for(self, item: Item | None) -> Scenario:
@@ -160,7 +160,7 @@ class Grading:
         if callable(scenario) and not isinstance(scenario, Scenario):
             scenario = scenario()
         if not isinstance(scenario, Scenario):
-            raise LookupError(
+            raise ConfigurationError(
                 "The trace fixture needs scenario = Scenario(...) in the test module "
                 "or @with_scenario(...) on the test."
             )
@@ -176,6 +176,8 @@ class Grading:
         """
         gates, items = collect(self.module)
         try:
+            if sum(item.points for item in items) <= 0:
+                raise ConfigurationError("The test module defines no tests worth points.")
             self.sandbox.prepare()
             for func in gates:
                 run_gate(func, self.resolve)

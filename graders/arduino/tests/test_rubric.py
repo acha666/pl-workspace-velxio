@@ -11,6 +11,7 @@ import pytest
 
 import arduinograder as ag
 from arduinograder import rubric
+from arduinograder.errors import INTERNAL_ERROR_MESSAGE
 from arduinograder.grading import Grading
 from arduinograder.pl import Submission
 from arduinograder.sandbox import Budget, Sandbox
@@ -114,10 +115,6 @@ def test_number(trace):
 def test_stopped_simulation(simulate):
     crashed = ag.Trace.from_text("T 160000 crashed")
     crashed.pin(13).at(500)
-
-@ag.points(1)
-def test_no_fixture(nonsense):
-    pass
 """
     )
     grading = FakeGrading(module, tmp_path)
@@ -132,9 +129,8 @@ def test_no_fixture(nonsense):
         (0.0, ""),
         (0.5, ""),
         (0.0, "The program crashed at 10 ms, so the simulation stopped."),
-        (0, rubric.GRADER_ERROR_MESSAGE),
     ]
-    assert results["score"] == pytest.approx(4.5 / 15)
+    assert results["score"] == pytest.approx(4.5 / 14)
     assert results["tests"][3]["max_points"] == 4
     json.dumps(results)
 
@@ -228,6 +224,28 @@ def test_d(simulate):
     assert grading.run().score == 1.0
     assert [scenario.duration_ms for scenario in grading.scenarios] == [2000, 2000, 300, 300]
 
-    module = module_from("import arduinograder as ag\n@ag.points(1)\ndef test_a(trace): pass\n")
-    results = FakeGrading(module, tmp_path).run()
-    assert results.items[0].message == rubric.GRADER_ERROR_MESSAGE
+
+def test_mistakes_in_the_test_module_make_every_submission_ungradable(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for source in [
+        "import arduinograder as ag\n@ag.points(1)\ndef test_a(trace): pass\n",
+        "import arduinograder as ag\n@ag.points(1)\ndef test_a(nonsense): pass\n",
+        "import arduinograder as ag\n@ag.gate\ndef gate(nonsense): pass\n",
+    ]:
+        results = FakeGrading(module_from(source), tmp_path).run()
+        assert not results.gradable and results.message == INTERNAL_ERROR_MESSAGE, source
+        assert results.items == []
+        assert "ConfigurationError" in capsys.readouterr().err
+
+
+def test_a_module_without_tests_worth_points_is_a_configuration_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for source in [
+        "import arduinograder as ag\n",
+        "import arduinograder as ag\n@ag.points(0)\ndef test_a(source): pass\n",
+    ]:
+        results = FakeGrading(module_from(source), tmp_path).run()
+        assert not results.gradable and results.message == INTERNAL_ERROR_MESSAGE
+        assert "no tests worth points" in capsys.readouterr().err
