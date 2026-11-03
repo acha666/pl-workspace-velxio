@@ -239,6 +239,22 @@ def test_mistakes_in_the_test_module_make_every_submission_ungradable(
         assert "ConfigurationError" in capsys.readouterr().err
 
 
+def test_a_time_budget_that_is_not_a_positive_number_is_a_configuration_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from arduinograder import grading
+
+    grade_dir = tmp_path / "grade"
+    (grade_dir / "student").mkdir(parents=True)
+    (grade_dir / "student/sketch.ino").write_text("void loop() {}")
+    for budget in ("45", 0, -1, float("inf"), True):
+        module = module_from("import arduinograder as ag\n@ag.points(1)\ndef test_a(source): pass")
+        vars(module)["TIME_BUDGET_S"] = budget
+        results = grading.grade(module, grade_dir=grade_dir, work_dir=tmp_path / "work")
+        assert not results.gradable, budget
+        assert "TIME_BUDGET_S" in capsys.readouterr().err
+
+
 def test_a_module_without_tests_worth_points_is_a_configuration_error(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

@@ -9,6 +9,7 @@ does that for the submission PrairieLearn lays out and writes the results.
 from __future__ import annotations
 
 import importlib.util
+import math
 import os
 import sys
 import traceback
@@ -26,8 +27,11 @@ from .toolchain import Compiler, Firmware
 
 WORK_DIR: Final = Path("/tmp/arduinograder")
 """Where sketches are compiled and simulated, unless ``grade()`` is told otherwise."""
-DEFAULT_TIME_BUDGET_S: Final = 45
-"""The wall-clock budget for compiling and simulating, unless the module sets ``TIME_BUDGET_S``."""
+DEFAULT_TIME_BUDGET_S: Final = 25
+"""The wall-clock budget for compiling and simulating, unless the module sets ``TIME_BUDGET_S``.
+
+It leaves room under PrairieLearn's default external grading timeout of 30 s.
+"""
 
 FIXTURE_NAMES: Final[frozenset[str]] = frozenset(
     {
@@ -219,6 +223,24 @@ def load_module(path: str | os.PathLike[str]) -> ModuleType:
     return module
 
 
+def _time_budget(module: ModuleType) -> float:
+    """Return the module's ``TIME_BUDGET_S``, or the default.
+
+    Raises:
+        ConfigurationError: If it is set to anything but a positive, finite number.
+    """
+    seconds: object = getattr(module, "TIME_BUDGET_S", DEFAULT_TIME_BUDGET_S)
+    if (
+        isinstance(seconds, bool)
+        or not isinstance(seconds, int | float)
+        or not 0 < seconds < math.inf
+    ):
+        raise ConfigurationError(
+            f"TIME_BUDGET_S must be a positive number of seconds, not {seconds!r}."
+        )
+    return seconds
+
+
 def grade(
     module: ModuleType | str | os.PathLike[str],
     *,
@@ -252,7 +274,7 @@ def grade(
     try:
         if not isinstance(module, ModuleType):
             module = load_module(module)
-        budget = Budget(getattr(module, "TIME_BUDGET_S", DEFAULT_TIME_BUDGET_S))
+        budget = Budget(_time_budget(module))
         if sandbox is None:
             sandbox = Sandbox.default(work_dir)
         if sandbox.user is None and grade_dir == GRADE_DIR:

@@ -14,7 +14,7 @@ The grader image compiles a submitted Uno sketch with the workspace's Arduino CL
 
 The image's entrypoint grades with the question's `tests/test.py`; set `entrypoint` only to run another file, for example `python3 -m arduinograder /grade/tests/other.py`.
 
-Give the question `autoPoints` in the assessment; PrairieLearn does not run the grader for questions with only manual points. Keep `TIME_BUDGET_S` (45 s by default, set in `test.py`) below the timeout.
+Give the question `autoPoints` in the assessment; PrairieLearn does not run the grader for questions with only manual points. Keep `TIME_BUDGET_S` (25 s by default, set in `test.py`) below the timeout, which PrairieLearn defaults to 30 s; the budget covers compiling and simulating, not the time the tests' own Python code takes.
 
 To try a test file without PrairieLearn, run it in the grader image on a sketch; the results students would see are printed as JSON:
 
@@ -72,7 +72,7 @@ Raise `ag.Ungradable(message)` anywhere when the submission cannot be graded; Pr
 | `tests_dir`   | The directory of `test.py`, for reference files kept next to it                         |
 | `compiler`, `simulator` | The `Compiler` and `Simulator` behind the fixtures above                       |
 
-Module settings: `TIME_BUDGET_S` (wall-clock budget for compiling and simulating, 45 by default) and `SKETCH_FILE` (the file to grade; by default `sketch.ino`, else the only `.ino` submitted).
+Module settings: `TIME_BUDGET_S` (wall-clock budget for compiling and simulating, 25 by default) and `SKETCH_FILE` (the file to grade; by default `sketch.ino`, else the only `.ino` submitted).
 
 ### `Scenario`
 
