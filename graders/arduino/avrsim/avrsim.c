@@ -16,7 +16,8 @@
  *   run CYCLE             run until CYCLE
  *   run CYCLE until KIND KEY
  *                         ... or until the program produces a record of KIND:
- *                         P with the pin number as KEY, or S (KEY is ignored)
+ *                         P with the pin number as KEY, or S with the byte
+ *                         value as KEY (-1 for any byte)
  *
  * Replies on stdout, one record per line:
  *   P CYCLE PIN STATE     pin driven by the program: H, L; or input: I, U (pull-up)
@@ -156,7 +157,7 @@ static void serial_output(struct avr_irq_t *irq, uint32_t value, void *param)
 	printf("S %llu %u\n", (unsigned long long)avr->cycle, value & 0xff);
 	if (++serial_bytes >= serial_limit)
 		final_reason = "serial-limit";
-	if (watch_kind == 'S')
+	if (watch_kind == 'S' && (watch_key < 0 || (int)(value & 0xff) == watch_key))
 		watch_reason = "watched";
 }
 
@@ -280,8 +281,9 @@ static void command(const char *line, int line_no)
 		else if (fields == 4 && !strcmp(arg, "until") && !strcmp(kind, "P")
 				&& a >= 0 && a < NUM_PINS)
 			run(cycle, 'P', a);
-		else if (fields == 4 && !strcmp(arg, "until") && !strcmp(kind, "S"))
-			run(cycle, 'S', -1);
+		else if (fields == 4 && !strcmp(arg, "until") && !strcmp(kind, "S")
+				&& a >= -1 && a < 256)
+			run(cycle, 'S', a);
 		else
 			fail("line %d: cannot parse run command", line_no);
 	} else if (!strcmp(word, "limit")) {

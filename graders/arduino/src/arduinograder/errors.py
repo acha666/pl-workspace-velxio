@@ -23,6 +23,15 @@ class Ungradable(Exception):
     """
 
 
+class ConfigurationError(Exception):
+    """The question's test module is set up wrongly, so no submission can be graded with it.
+
+    Raised for a mistake the author must fix, such as an unknown fixture
+    name or a missing ``scenario``: the submission is reported as ungradable
+    with the internal error message, and the cause goes to the log.
+    """
+
+
 class StopGrading(Exception):
     """Stop grading with a score of zero and a message for the student.
 

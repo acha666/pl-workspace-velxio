@@ -13,6 +13,8 @@ from ..board import NUM_PINS, Level, PinLike, pin_name, pin_number, to_cycles, t
 StopReason: TypeAlias = Literal["end", "done", "crashed", "pin-limit", "serial-limit"]
 """Why a trace ends: ``"end"`` for a scenario run to completion, else early."""
 STOP_REASONS: Final[frozenset[str]] = frozenset(get_args(StopReason))
+MAX_DESCRIBED: Final = 25
+"""Edge times ``Edges.describe()`` lists at most."""
 RecordKind: TypeAlias = Literal["P", "S"]
 """The kinds of record avrsim reports: ``"P"`` for a pin state, ``"S"`` for a Serial byte."""
 
@@ -65,6 +67,33 @@ STATE_CODES: Final[Mapping[str, PinState]] = {
     "U": PinState.INPUT_PULLUP,
 }
 """The one-letter state codes in avrsim's ``P`` records."""
+
+
+LevelLike: TypeAlias = PinState | str | int
+"""A level as ``HIGH``/``LOW`` (1/0), a bool, ``"HIGH"``/``"LOW"``, or an output ``PinState``."""
+
+
+def as_level(value: LevelLike) -> Level:
+    """Return 1 or 0 for a level given in any accepted form.
+
+    Raises:
+        ValueError: If ``value`` is not a level: an input ``PinState``, another
+            string, or a number other than 0 and 1.
+    """
+    if isinstance(value, PinState):
+        if value.level is None:
+            raise ValueError(f"Not an output level: {value!r}")
+        return value.level
+    if isinstance(value, str):
+        name = value.strip().upper()
+        if name in ("HIGH", "1"):
+            return 1
+        if name in ("LOW", "0"):
+            return 0
+        raise ValueError(f"Not a level: {value!r}")
+    if value in (0, 1):
+        return 1 if value else 0
+    raise ValueError(f"Not a level: {value!r}")
 
 
 class Change(NamedTuple):
@@ -160,8 +189,15 @@ class Edges(list[Edge]):
         )
 
     def describe(self) -> str:
-        """Return the edge times for a message: ``"500 ms, 1000 ms"``, or ``"never"``."""
-        return ", ".join(f"{edge.time_ms:.0f} ms" for edge in self) or "never"
+        """Return the edge times for a message: ``"500 ms, 1000 ms"``, or ``"never"``.
+
+        A pin that flips without end would make an endless message, so only
+        the first ``MAX_DESCRIBED`` times are listed, then how many follow.
+        """
+        times = [f"{edge.time_ms:.0f} ms" for edge in self[:MAX_DESCRIBED]]
+        if len(self) > MAX_DESCRIBED:
+            times.append(f"and {len(self) - MAX_DESCRIBED} more")
+        return ", ".join(times) or "never"
 
 
 class PinTrace:
@@ -196,7 +232,8 @@ class PinTrace:
         return self.at(ms).level
 
     def _window(self, start_ms: float, end_ms: float | None) -> tuple[int, int]:
-        start = to_cycles(start_ms)
+        """Return the window in cycles; both ends are checked as ``at()`` checks its time."""
+        start = self._trace._cycle_at(start_ms)
         end = self._trace._end_cycle if end_ms is None else self._trace._cycle_at(end_ms)
         return start, end
 
@@ -270,7 +307,8 @@ class SerialTrace:
         return bool(self._data)
 
     def _window(self, start_ms: float, end_ms: float | None) -> list[tuple[int, int]]:
-        start = to_cycles(start_ms)
+        """Return the bytes in the window; both ends are checked as ``PinTrace.at()`` checks."""
+        start = self._trace._cycle_at(start_ms)
         end = self._trace._end_cycle if end_ms is None else self._trace._cycle_at(end_ms)
         return [(cycle, byte) for cycle, byte in self._data if start <= cycle <= end]
 
@@ -428,13 +466,13 @@ class Trace:
                 return f"The program crashed at {at}, so the simulation stopped."
             case "pin-limit":
                 return (
-                    f"The simulation stopped at {at} because the program changed its pins "
-                    f"more than {self.max_pin_changes} times."
+                    f"The simulation stopped at {at} because the program had changed its pins "
+                    f"{self.max_pin_changes} times, the limit for this question."
                 )
             case "serial-limit":
                 return (
-                    f"The simulation stopped at {at} because the program printed more than "
-                    f"{self.max_serial_bytes} bytes on Serial."
+                    f"The simulation stopped at {at} because the program had printed "
+                    f"{self.max_serial_bytes} bytes on Serial, the limit for this question."
                 )
             case never:
                 assert_never(never)

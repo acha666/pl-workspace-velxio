@@ -52,17 +52,17 @@ def test_find_calls_ignores_comments_strings_and_other_names() -> None:
         "  mydelay(3); _delay_ms(4); delayMicroseconds(1);\n"
         "}\n"
     )
-    calls = find_calls(source, ["delay"])
+    calls = find_calls(source, "delay")
     assert [(call.name, call.line, call.text) for call in calls] == [
         ("delay", 4, "delay (5);"),
         ("delay", 5, "::delay(2);"),
     ]
-    assert [call.line for call in find_calls(source, ["delayMicroseconds"])] == [6]
+    assert [call.line for call in find_calls(source, "delayMicroseconds")] == [6]
 
 
 def test_find_calls_line_numbers_survive_unusual_line_breaks() -> None:
     source = "int a; /* \x0c form feed */\r\nvoid loop() {\r\n  delay(1);\r\n}\r\n"
-    assert [call.line for call in find_calls(source, ["delay"])] == [3]
+    assert [call.line for call in find_calls(source, "delay")] == [3]
 
 
 def test_forbid_calls_stops_grading_and_lists_the_calls() -> None:

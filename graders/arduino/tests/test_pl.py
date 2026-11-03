@@ -9,8 +9,9 @@ from pathlib import Path
 import pytest
 
 from arduinograder import cli, grading, pl, rubric
-from arduinograder.errors import INTERNAL_ERROR_MESSAGE
+from arduinograder.errors import INTERNAL_ERROR_MESSAGE, Ungradable
 from arduinograder.pl import Results
+from arduinograder.rubric import ItemResult
 
 
 def module_from(source: str) -> types.ModuleType:
@@ -81,3 +82,73 @@ def test_main_defaults_to_the_tests_under_the_grading_directory(
     assert json.loads(capsys.readouterr().out)["score"] == 1.0
     with pytest.raises(SystemExit):
         cli.main(["--grade-dir", str(tmp_path / "elsewhere"), *work, "--sketch", str(sketch)])
+
+
+def test_results_with_nan_are_written_as_ungradable(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    results = Results()
+    results.add(ItemResult("Nan", float("nan"), 1))
+    results.write(tmp_path)
+    written = json.loads((tmp_path / "results/results.json").read_text())
+    assert written["gradable"] is False and written["message"] == INTERNAL_ERROR_MESSAGE
+    assert "ValueError" in capsys.readouterr().err
+
+
+def test_long_messages_are_clipped() -> None:
+    results = Results()
+    results.add(ItemResult("Long", 0, 1, message="x" * 20_000))
+    results.add_message("y" * 20_000)
+    written = results.to_dict()
+    assert len(written["tests"][0]["message"]) < pl.MAX_MESSAGE_CHARS + 100
+    assert written["tests"][0]["message"].endswith("[message truncated]")
+    assert written["message"].endswith("[message truncated]")
+    assert Results().to_dict()["message"] == ""
+
+
+def test_an_unguarded_main_in_the_test_file_grades_once(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    grade_dir = tmp_path / "grade"
+    (grade_dir / "tests").mkdir(parents=True)
+    (grade_dir / "tests/test.py").write_text(
+        "import arduinograder as ag\n@ag.points(1)\ndef test_a(source): assert 'loop' in source\n"
+        "ag.main()\n"
+    )
+    sketch = tmp_path / "attempt.ino"
+    sketch.write_text("void loop() {}")
+    work = ["--work-dir", str(tmp_path / "work")]
+    assert cli.main(["--grade-dir", str(grade_dir), *work, "--sketch", str(sketch)]) == 0
+    assert json.loads(capsys.readouterr().out)["score"] == 1.0
+
+
+def test_loading_a_test_module_works_like_running_it(tmp_path: Path) -> None:
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    (tests / "helpers.py").write_text("PIN = 13\n")
+    (tests / "test.py").write_text(
+        "from __future__ import annotations\n"
+        "from dataclasses import dataclass\n"
+        "import arduinograder as ag\n"
+        "from helpers import PIN\n"
+        "@dataclass\n"
+        "class Pins:\n"
+        "    led: int = PIN\n"
+        "@ag.points(1)\n"
+        "def test_led(source): assert Pins().led == 13\n"
+    )
+    module = grading.load_module(tests / "test.py")
+    assert [item.name for item in rubric.collect(module)[1]] == ["Led"]
+
+
+def test_several_sketches_and_links_are_not_graded(tmp_path: Path) -> None:
+    student = tmp_path / "student"
+    student.mkdir()
+    (student / "a.ino").write_text("void loop() {}")
+    (student / "b.ino").write_text("void loop() {}")
+    with pytest.raises(Ungradable, match=r"Several sketches were submitted \(a.ino, b.ino\)"):
+        pl.Submission(tmp_path).sketch_path  # noqa: B018
+    (tmp_path / "secret").write_text("void loop() {}")
+    (student / "sketch.ino").symlink_to(tmp_path / "secret")
+    with pytest.raises(Ungradable, match="No submission"):
+        pl.Submission(tmp_path).sketch_path  # noqa: B018

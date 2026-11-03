@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Protocol, TypeAlias
 
 from ..board import ANALOG_PINS, Level, PinLike, pin_number, to_cycles
+from .trace import LevelLike, as_level
 
 
 class Inputs(Protocol):
     """What an event applies itself to: a program's inputs, as ``Session`` offers them."""
 
-    def set(self, pin: PinLike, level: int | bool) -> None:
+    def set(self, pin: PinLike, level: LevelLike) -> None:
         """Drive a digital input from outside."""
         ...
 
@@ -158,10 +160,10 @@ class Scenario:
         """Start an empty scenario.
 
         Raises:
-            ValueError: If ``duration_ms`` is not positive.
+            ValueError: If ``duration_ms`` is not a positive, finite number.
         """
-        if duration_ms <= 0:
-            raise ValueError("A scenario needs a positive duration.")
+        if not (math.isfinite(duration_ms) and duration_ms > 0):
+            raise ValueError("A scenario needs a positive, finite duration.")
         self.duration_ms = duration_ms
         self.max_pin_changes = max_pin_changes
         self.max_serial_bytes = max_serial_bytes
@@ -172,19 +174,19 @@ class Scenario:
             raise ValueError(f"Event at {at_ms} ms is after the scenario ends.")
         return to_cycles(at_ms), len(self._events)
 
-    def set(self, pin: PinLike, level: int | bool, *, at_ms: float = 0) -> Scenario:
+    def set(self, pin: PinLike, level: LevelLike, *, at_ms: float = 0) -> Scenario:
         """Drive a digital input from outside, overriding any internal pull-up.
 
         Args:
             pin: The input pin.
-            level: HIGH (1) or LOW (0).
+            level: HIGH (1) or LOW (0), also as ``"HIGH"``/``"LOW"`` or a ``PinState``.
             at_ms: When to apply it.
 
         Raises:
-            ValueError: If the pin is invalid or the time is after the end.
+            ValueError: If the pin or level is invalid or the time is after the end.
         """
+        value = as_level(level)
         cycle, order = self._at(at_ms)
-        value: Level = 1 if level else 0
         self._events.append(DigitalEvent(cycle, order, pin_number(pin), value))
         return self
 
@@ -202,7 +204,7 @@ class Scenario:
         return self
 
     def pulse(
-        self, pin: PinLike, level: int | bool, *, at_ms: float, duration_ms: float
+        self, pin: PinLike, level: LevelLike, *, at_ms: float, duration_ms: float
     ) -> Scenario:
         """Drive a pin to ``level`` at ``at_ms`` and release it ``duration_ms`` later.
 
@@ -215,7 +217,18 @@ class Scenario:
             level: The level during the pulse.
             at_ms: When the pulse starts.
             duration_ms: How long it lasts.
+
+        Raises:
+            ValueError: If the pulse is negative or ends after the scenario, or
+                the pin or level is invalid; nothing is added then.
         """
+        if duration_ms < 0:
+            raise ValueError(f"A pulse cannot last {duration_ms} ms.")
+        if at_ms + duration_ms > self.duration_ms:
+            raise ValueError(
+                f"A pulse ending at {at_ms + duration_ms} ms is after the scenario ends."
+            )
+        as_level(level)
         self.set(pin, level, at_ms=at_ms)
         return self.release(pin, at_ms=at_ms + duration_ms)
 

@@ -165,7 +165,7 @@ def test_limits_stop_the_simulation_and_explain_why(
     toggles = "void setup() { pinMode(13, OUTPUT); } void loop() { PINB = _BV(5); }"
     trace = simulate(toggles, Scenario(duration_ms=1000, max_pin_changes=1000))
     assert trace.stop_reason == "pin-limit" and trace.end_ms < 10
-    with pytest.raises(SimulationStopped, match="changed its pins more than 1000 times"):
+    with pytest.raises(SimulationStopped, match="changed its pins 1000 times"):
         trace.pin(13).level(500)
     with session(toggles, max_pin_changes=1000) as run:
         assert run.run_until(1000) is False
@@ -271,3 +271,32 @@ def test_each_pin_keeps_its_own_place_in_the_records(session: SessionFn) -> None
         high_9 = run.wait_for(9, "HIGH", timeout_ms=0)
         assert high_13 is not None and high_13 == high_9
         assert run.wait_for(9, timeout_ms=0) is None
+
+
+NO_NEWLINE = """
+void setup() { Serial.begin(115200); }
+void loop() { Serial.print("value "); }
+"""
+
+
+def test_each_compilation_keeps_its_own_firmware(toolchain: tuple[Compiler, Simulator]) -> None:
+    compiler, simulator = toolchain
+    blink = compiler.compile(BLINK)
+    quiet = compiler.compile("void setup() {}\nvoid loop() {}\n")
+    assert blink.path != quiet.path
+    assert simulator.run(blink, Scenario(duration_ms=1200)).pin(13).edges()
+    assert not simulator.run(quiet, Scenario(duration_ms=1200)).pin(13).edges()
+
+
+def test_a_timed_out_wait_leaves_the_changes_for_a_later_one(session: SessionFn) -> None:
+    with session(BLINK) as run:
+        run.run_until(100)
+        assert run.wait_for(13, "INPUT", timeout_ms=600) is None
+        assert run.wait_for(13, "HIGH", timeout_ms=0) == pytest.approx(500, abs=1)
+
+
+def test_waiting_for_a_line_needs_a_newline(session: SessionFn) -> None:
+    with session(NO_NEWLINE) as run:
+        assert run.wait_for_line(timeout_ms=200) is None
+        assert run.now_ms == 200
+        assert run.trace.serial.text().startswith("value value")

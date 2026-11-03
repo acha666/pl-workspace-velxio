@@ -8,13 +8,14 @@ failing or broken test never affects the others.
 from __future__ import annotations
 
 import inspect
+import math
 import traceback
 from collections.abc import Callable
 from dataclasses import dataclass
 from types import FunctionType, ModuleType
 from typing import Final, Protocol, TypeAlias, TypedDict, TypeVar
 
-from .errors import StopGrading, Ungradable
+from .errors import ConfigurationError, StopGrading, Ungradable
 from .sim import Scenario, SimulationStopped
 
 GRADER_ERROR_MESSAGE: Final = (
@@ -147,20 +148,21 @@ class Check:
 
         Args:
             condition: What should be true.
-            message: Shown to the student if it is not.
+            message: Shown to the student if it is not; anything else is
+                converted to text.
 
         Returns:
             The condition as a bool, so a test can stop early.
         """
         self.total += 1
         if not condition:
-            self.failures.append(message)
+            self.failures.append(str(message))
         return bool(condition)
 
     def fail(self, message: str) -> None:
         """Record a failure outright."""
         self.total += 1
-        self.failures.append(message)
+        self.failures.append(str(message))
 
     @property
     def ok(self) -> bool:
@@ -249,9 +251,9 @@ def collect(module: ModuleType) -> tuple[list[TestFunction], list[Item]]:
             items.append(
                 Item(
                     func,
-                    spec.name or _default_name(func),
+                    str(spec.name) if spec.name else _default_name(func),
                     spec.points,
-                    spec.description,
+                    str(spec.description),
                     spec.scenario,
                 )
             )
@@ -276,9 +278,16 @@ def run_gate(func: TestFunction, resolve: Resolver) -> None:
     """Run a gate.
 
     Raises:
-        StopGrading: If the gate raised it or returned a message.
+        StopGrading: If the gate raised it or returned a message, or if it
+            failed an ``assert`` or asked about a time after the simulation
+            stopped, as a test would fail.
     """
-    message = call_with_fixtures(func, resolve)
+    try:
+        message = call_with_fixtures(func, resolve)
+    except AssertionError as error:
+        raise StopGrading(str(error) or "A check failed.") from None
+    except SimulationStopped as stopped:
+        raise StopGrading(str(stopped)) from None
     if message:
         raise StopGrading(str(message))
 
@@ -286,9 +295,10 @@ def run_gate(func: TestFunction, resolve: Resolver) -> None:
 def run_item(item: Item, resolve: Resolver) -> ItemResult:
     """Run one test on its own.
 
-    ``StopGrading`` and ``Ungradable`` propagate; any other exception fails
-    only this test. A failing assert's message, a ``SimulationStopped``
-    explanation and every failed check are reported to the student.
+    ``StopGrading``, ``Ungradable`` and ``ConfigurationError`` propagate; any
+    other exception fails only this test. A failing assert's message, a
+    ``SimulationStopped`` explanation and every failed check are reported to
+    the student.
 
     Args:
         item: The test to run.
@@ -305,7 +315,7 @@ def run_item(item: Item, resolve: Resolver) -> ItemResult:
     try:
         outcome = call_with_fixtures(item.func, resolve_for_item)
         fraction = _fraction(outcome, check)
-    except (StopGrading, Ungradable):
+    except (StopGrading, Ungradable, ConfigurationError):
         raise
     except AssertionError as error:
         check.fail(str(error) or "A check failed.")
@@ -316,9 +326,11 @@ def run_item(item: Item, resolve: Resolver) -> ItemResult:
     except Exception:
         traceback.print_exc()
         return ItemResult(item.name, 0, item.points, item.description, GRADER_ERROR_MESSAGE)
+    # Not rounded: rounding the points but not max_points puts a full-marks
+    # score off 1.0, which PrairieLearn rejects or shows as 99%.
     return ItemResult(
         item.name,
-        round(item.points * fraction, 4),
+        item.points * fraction,
         item.points,
         item.description,
         "\n".join(check.failures),
@@ -331,6 +343,6 @@ def _fraction(outcome: object, check: Check) -> float:
         return 1.0 if check.ok else 0.0
     if isinstance(outcome, bool):
         return 1.0 if outcome else 0.0
-    if isinstance(outcome, int | float):
+    if isinstance(outcome, int | float) and math.isfinite(outcome):
         return min(max(float(outcome), 0.0), 1.0)
     raise TypeError(f"A test must return None, a bool or a fraction, not {outcome!r}.")

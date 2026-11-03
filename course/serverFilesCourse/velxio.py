@@ -57,6 +57,16 @@ def parse(data):
         data["format_errors"].setdefault("_files", []).append("Invalid submitted files.")
         return
 
+    # Only PrairieLearn adds _files, from the workspace's graded files, after it
+    # has copied the request into raw_submitted_answers. A client sending its own
+    # could get another sketch graded than the one in its project: an alias such
+    # as "./sketch.ino" overwrites the extracted sketch in the grader's directory,
+    # and a project of its own is kept when the workspace has never been opened.
+    if "_files" in data.get("raw_submitted_answers", {}):
+        data["submitted_answers"]["_files"] = []
+        data["format_errors"].setdefault("_files", []).append("Invalid submitted files.")
+        return
+
     # Discard any supplied or previously derived preview, even on invalid submissions.
     data["submitted_answers"]["_files"] = [
         file for file in submitted_files if file.get("name") != "sketch.ino"
@@ -67,6 +77,9 @@ def parse(data):
             "Open the workspace, wait until the save icon above its file list is green, "
             "then click Save on PrairieLearn."
         )
+        return
+    if len(data["submitted_answers"]["_files"]) != 1:
+        data["format_errors"].setdefault("_files", []).append("Invalid submitted files.")
         return
 
     try:

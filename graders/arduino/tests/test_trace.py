@@ -6,7 +6,7 @@ import pytest
 
 from arduinograder import PinState, Scenario, SimulationStopped, Trace
 from arduinograder.sim import AnalogEvent, DigitalEvent, ReleaseEvent, SendEvent, runner
-from arduinograder.sim.trace import as_stop_reason
+from arduinograder.sim.trace import as_level, as_stop_reason
 
 BLINK_TRACE = """
 P 0 13 I
@@ -92,8 +92,17 @@ def test_times_past_the_end_are_errors_or_stops(trace: Trace) -> None:
     assert crashed.ended_early and crashed.stop_reason == "crashed"
     with pytest.raises(SimulationStopped, match="crashed at 10 ms"):
         crashed.pin(13).level(11)
+    # Windows are checked at both ends, so a check over a time the program never
+    # reached cannot pass by finding nothing there.
+    with pytest.raises(ValueError, match="after the simulation ends"):
+        trace.pin(13).edges(start_ms=2001)
+    with pytest.raises(SimulationStopped):
+        crashed.pin(13).edges(start_ms=11)
+    with pytest.raises(SimulationStopped):
+        crashed.serial.text(start_ms=11)
+    assert crashed.pin(13).edges(start_ms=5) == [] and crashed.serial.text(start_ms=5) == ""
     limited = Trace.from_text("T 16000 pin-limit", max_pin_changes=5)
-    assert limited.stop_message is not None and "more than 5 times" in limited.stop_message
+    assert limited.stop_message is not None and "5 times, the limit" in limited.stop_message
     with pytest.raises(ValueError):
         Trace.from_text("P 0 13 I")
     with pytest.raises(ValueError):
@@ -147,3 +156,34 @@ def test_reason_words_match_the_avrsim_protocol() -> None:
         runner._as_run_reason("vanished")
     assert as_stop_reason("reached") == "end"
     assert as_stop_reason("pin-limit") == "pin-limit"
+
+
+def test_describe_lists_only_the_first_edges() -> None:
+    records = "".join(f"P {16000 * (i + 1)} 13 {'H' if i % 2 == 0 else 'L'}\n" for i in range(40))
+    trace = Trace.from_text("P 0 13 I\nP 8000 13 L\n" + records + "T 1600000 reached")
+    edges = trace.pin(13).edges()
+    assert len(edges) == 40
+    described = edges.describe()
+    assert described.endswith(", and 15 more") and described.count(" ms") == 25
+
+
+def test_levels_are_checked_and_pulses_are_all_or_nothing() -> None:
+    given: list[PinState | str | int] = [1, 0, True, False, "HIGH", "low", "1", PinState.LOW]
+    assert [as_level(value) for value in given] == [1, 0, 1, 0, 1, 0, 1, 0]
+    bad: PinState | str | int
+    for bad in (2, -1, "ON", PinState.INPUT):
+        with pytest.raises(ValueError):
+            as_level(bad)
+    for duration in (float("nan"), float("inf"), 0):
+        with pytest.raises(ValueError):
+            Scenario(duration)
+    scenario = Scenario(duration_ms=100)
+    with pytest.raises(ValueError):
+        scenario.pulse(2, 1, at_ms=10, duration_ms=-1)
+    with pytest.raises(ValueError):
+        scenario.pulse(2, 1, at_ms=95, duration_ms=10)
+    with pytest.raises(ValueError):
+        scenario.pulse(2, "ON", at_ms=10, duration_ms=10)
+    assert scenario.events == []
+    event = scenario.set(2, "LOW").events[0]
+    assert isinstance(event, DigitalEvent) and event.level == 0

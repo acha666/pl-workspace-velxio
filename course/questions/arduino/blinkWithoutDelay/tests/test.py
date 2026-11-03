@@ -7,7 +7,7 @@ LED = 13
 HALF_PERIOD_MS = 500
 TOLERANCE_MS = 20
 
-gates = [no_calls("delay")]
+gates = [no_calls("delay", "delayMicroseconds")]
 scenario = ag.Scenario(duration_ms=2600)
 
 

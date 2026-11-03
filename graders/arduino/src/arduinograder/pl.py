@@ -11,14 +11,28 @@ from __future__ import annotations
 
 import json
 import os
+import traceback
 from pathlib import Path
 from typing import Any, Final, TypedDict
 
-from .errors import Ungradable
+from .errors import INTERNAL_ERROR_MESSAGE, Ungradable
 from .rubric import ItemResult, TestResultDict
 
 GRADE_DIR: Final = Path("/grade")
 """PrairieLearn's grading directory inside the container."""
+MAX_MESSAGE_CHARS: Final = 8000
+"""Characters kept of each test's message and of the overall one.
+
+PrairieLearn rejects results over 1 MiB, and a message that echoes what a
+sketch did can grow without bound.
+"""
+
+
+def _clip(text: str) -> str:
+    """Return ``text`` cut to ``MAX_MESSAGE_CHARS``, saying so when it was."""
+    if len(text) <= MAX_MESSAGE_CHARS:
+        return text
+    return text[:MAX_MESSAGE_CHARS] + "\n[message truncated]"
 
 
 class ResultsDict(TypedDict):
@@ -80,7 +94,8 @@ class Submission:
         """The submitted sketch.
 
         Raises:
-            Ungradable: If there is no sketch to grade, with a message for the student.
+            Ungradable: If there is no sketch to grade, or several, with a
+                message for the student.
         """
         if self.sketch_file:
             candidates = [self.student_dir / self.sketch_file]
@@ -88,7 +103,14 @@ class Submission:
             candidates = [self.student_dir / "sketch.ino"]
         else:
             candidates = sorted(self.student_dir.glob("*.ino"))
-        if len(candidates) != 1 or not candidates[0].is_file():
+        if len(candidates) > 1:
+            names = ", ".join(path.name for path in candidates)
+            raise Ungradable(
+                f"Several sketches were submitted ({names}). Submit one .ino file and try again."
+            )
+        # A symbolic link could point the grader, which runs as root, at a file
+        # the sketch itself may not read.
+        if len(candidates) != 1 or candidates[0].is_symlink() or not candidates[0].is_file():
             name = self.sketch_file or "an Arduino sketch (.ino file)"
             raise Ungradable(f"No submission was found. Submit {name} and try again.")
         return candidates[0]
@@ -140,19 +162,34 @@ class Results:
         return sum(item.points for item in self.items) / total
 
     def to_dict(self) -> ResultsDict:
-        """Return the ``results.json`` content."""
+        """Return the ``results.json`` content, with messages clipped to ``MAX_MESSAGE_CHARS``."""
+        tests = [item.to_dict() for item in self.items]
+        for test in tests:
+            test["message"] = _clip(test["message"])
         return {
             "gradable": self.gradable,
             "score": self.score,
-            "message": self.message,
-            "tests": [item.to_dict() for item in self.items],
+            "message": _clip(self.message),
+            "tests": tests,
         }
 
     def write(self, grade_dir: str | os.PathLike[str]) -> None:
-        """Write ``results/results.json`` under the grading directory."""
+        """Write ``results/results.json`` under the grading directory.
+
+        PrairieLearn cannot parse ``NaN`` or ``Infinity``, so a result holding
+        one is written as ungradable with the internal error message instead.
+        """
         path = Path(grade_dir) / "results/results.json"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(self.to_dict()), encoding="utf-8")
+        try:
+            text = json.dumps(self.to_dict(), allow_nan=False)
+        except ValueError:
+            traceback.print_exc()
+            failed = Results()
+            failed.gradable = False
+            failed.add_message(INTERNAL_ERROR_MESSAGE)
+            text = json.dumps(failed.to_dict())
+        path.write_text(text, encoding="utf-8")
 
 
 def protect(grade_dir: Path) -> None:

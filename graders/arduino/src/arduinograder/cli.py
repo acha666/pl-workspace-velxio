@@ -43,12 +43,20 @@ def _test_module(
     return str(default) if default.is_file() else None
 
 
+_grading = False
+"""Whether ``main()`` is grading, so that a nested call does nothing."""
+
+
 def main(argv: Sequence[str] | None = None, module: ModuleType | None = None) -> int:
     """Grade as PrairieLearn's entry point, or a sketch locally with ``--sketch``.
 
     Without a ``tests`` argument, grades with ``module``, with the running
     ``__main__`` module when it is a test file ending in ``ag.main()``, or
     else with ``tests/test.py`` under the grading directory.
+
+    A test file that calls ``main()`` at import, without the ``__main__``
+    guard, would otherwise grade again from inside ``grade()``: such a
+    nested call returns at once.
 
     Args:
         argv: Command-line arguments; by default ``sys.argv[1:]``.
@@ -57,6 +65,18 @@ def main(argv: Sequence[str] | None = None, module: ModuleType | None = None) ->
     Returns:
         The exit status, always 0: results go to ``results.json`` or stdout.
     """
+    global _grading
+    if _grading:
+        return 0
+    _grading = True
+    try:
+        return _run(argv, module)
+    finally:
+        _grading = False
+
+
+def _run(argv: Sequence[str] | None, module: ModuleType | None) -> int:
+    """Parse the command line and grade; see ``main()``."""
     parser = argparse.ArgumentParser(
         prog="arduinograder", description="Grade an Arduino sketch with a question's tests."
     )

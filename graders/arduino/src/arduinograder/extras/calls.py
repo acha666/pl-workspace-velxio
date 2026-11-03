@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from typing import Final, NamedTuple
 
 import tree_sitter_cpp
@@ -28,7 +28,7 @@ class Call(NamedTuple):
 _PARSER: Final = Parser(Language(tree_sitter_cpp.language()))
 
 
-def find_calls(source: str, names: Iterable[str]) -> list[Call]:
+def find_calls(source: str, *names: str) -> list[Call]:
     """Return calls to the named functions, ignoring comments and string literals.
 
     Matches plain and ``::``-qualified calls such as ``delay(10)`` and
@@ -37,7 +37,7 @@ def find_calls(source: str, names: Iterable[str]) -> list[Call]:
 
     Args:
         source: The sketch's text.
-        names: The function names to look for.
+        *names: The function names to look for, as in ``no_calls()``.
 
     Returns:
         The calls in line order.
@@ -68,7 +68,7 @@ def forbid_calls(source: str, *names: str) -> None:
     Raises:
         StopGrading: Listing up to three of the calls.
     """
-    calls = find_calls(source, names)
+    calls = find_calls(source, *names)
     if calls:
         listed = "\n".join(f"    line {call.line}: {call.text}" for call in calls[:3])
         called = ", ".join(sorted({f"{call.name}()" for call in calls}))
