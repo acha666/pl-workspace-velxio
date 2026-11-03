@@ -271,3 +271,12 @@ def test_each_pin_keeps_its_own_place_in_the_records(session: SessionFn) -> None
         high_9 = run.wait_for(9, "HIGH", timeout_ms=0)
         assert high_13 is not None and high_13 == high_9
         assert run.wait_for(9, timeout_ms=0) is None
+
+
+def test_each_compilation_keeps_its_own_firmware(toolchain: tuple[Compiler, Simulator]) -> None:
+    compiler, simulator = toolchain
+    blink = compiler.compile(BLINK)
+    quiet = compiler.compile("void setup() {}\nvoid loop() {}\n")
+    assert blink.path != quiet.path
+    assert simulator.run(blink, Scenario(duration_ms=1200)).pin(13).edges()
+    assert not simulator.run(quiet, Scenario(duration_ms=1200)).pin(13).edges()

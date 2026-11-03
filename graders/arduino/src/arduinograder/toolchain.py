@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import itertools
 import re
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
@@ -84,6 +86,7 @@ class Compiler:
         self.budget = budget
         self.fqbn = fqbn
         self.limits = limits
+        self._builds = itertools.count()
 
     def compile(self, source: str, *, name: str = "sketch.ino") -> Firmware:
         """Compile a sketch.
@@ -120,7 +123,11 @@ class Compiler:
         firmware = build / "sketch.ino.elf"
         if not firmware.is_file():
             raise RuntimeError(f"arduino-cli produced no firmware:\n{log}")
-        return Firmware(firmware, log)
+        # The next compilation reuses the build directory, so keep this
+        # firmware apart from it: a test may compile a reference sketch too.
+        kept = self.sandbox.path(f"firmware-{next(self._builds)}.elf")
+        shutil.copyfile(firmware, kept)
+        return Firmware(kept, log)
 
     def _clean(self, log: str, sketch: Path, name: str) -> str:
         """Strip colours, work paths and build statistics from compiler output."""
