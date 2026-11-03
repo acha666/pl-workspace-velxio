@@ -29,6 +29,7 @@ The grader's test API is redesigned, and the repository is laid out for more tha
 
 - The Arduino grader is in `graders/arduino/` and the Arduino workspace sources in `workspaces/arduino/`, each with its tests and, for the grader, its regression cases; `tests/` keeps the course template tests.
 - Both images build straight from the repository. The Dockerfile fetches the pinned Velxio commit and applies the patches, adapter and dependency locks itself, so `scripts/prepare.py`, the prepared `.build` context and `toolchain.lock.json` are gone, and every pin is at the top of the Dockerfile; `--build-context velxio-upstream=PATH` builds from a local Velxio checkout. The workspace's source archive holds the build files and `workspaces/`, and `run.sh` checks that it holds no course files or graders and that the image rebuilds from it.
+- `docker-bake.hcl` defines the image and test targets for local builds and CI: `docker buildx bake test` runs the test targets in parallel and `docker buildx bake --load` builds `pl-arduino-workspace:dev` and `pl-arduino-grader:dev`. CI builds through it as well, with each image's layers cached in its own GitHub Actions cache scope.
 - `graders/*` are members of a [uv](https://docs.astral.sh/uv/) workspace with one `uv.lock`, from which the grader image installs `arduinograder`. The package is split by responsibility (`rubric`, `grading`, `sim`, `sandbox`, `toolchain`, `pl`, `cli`), fully typed with Google-style docstrings, and `grader-test` runs ruff, `mypy --strict` and pytest.
 
 ## 2.0.0 — 2026-10-20

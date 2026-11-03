@@ -32,7 +32,8 @@ RUN mkdir -p /opt/arduino/user \
 # Workspace: Velxio frontend, Python backend and nginx, as in upstream's
 # Dockerfile.standalone, built from the pinned commit with the PL patches,
 # adapter and dependency locks applied. To build from a local checkout of that
-# commit instead, pass --build-context velxio-upstream=PATH.
+# commit instead, pass --build-context velxio-upstream=PATH (with bake:
+# --set '*.contexts.velxio-upstream=PATH').
 
 FROM scratch AS velxio-upstream
 ARG VELXIO_COMMIT
@@ -93,7 +94,7 @@ RUN python -m pytest -q /tests
 # whose tests may solve the templates, stay out.
 FROM python:3.12-slim-bookworm AS source-offer
 WORKDIR /offer
-COPY Dockerfile LICENSE SOURCE.md ./
+COPY Dockerfile docker-bake.hcl LICENSE SOURCE.md ./
 COPY workspaces/ workspaces/
 RUN tar -czf /pl-adapter-source.tar.gz .
 

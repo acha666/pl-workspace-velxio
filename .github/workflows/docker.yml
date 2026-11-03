@@ -43,73 +43,33 @@ jobs:
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - name: Test frontend
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      - name: Run test targets
+        uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
         with:
-          context: .
-          target: frontend-test
-          platforms: linux/amd64
-          cache-from: type=gha,scope=arduino
+          source: .
+          targets: test
+          vars: LAYER_CACHE=gha
 
-      - name: Test backend and question templates
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      - name: Build images
+        uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
         with:
-          context: .
-          target: backend-test
-          platforms: linux/amd64
-          cache-from: type=gha,scope=arduino
-
-      - name: Test grader
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          target: grader-test
-          platforms: linux/amd64
-          cache-from: |
-            type=gha,scope=arduino
-            type=gha,scope=grader
-
-      - name: Build Arduino workspace
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          target: workspace
-          platforms: linux/amd64
+          source: .
           load: true
-          tags: pl-workspace-velxio:test
-          labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=${{ steps.release.outputs.version || github.sha }}
-          cache-from: type=gha,scope=arduino
-          cache-to: type=gha,mode=max,scope=arduino
+          vars: LAYER_CACHE=gha
+          set: |
+            *.labels.org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            *.labels.org.opencontainers.image.revision=${{ github.sha }}
+            *.labels.org.opencontainers.image.version=${{ steps.release.outputs.version || github.sha }}
 
       - name: Test workspace
-        run: bash workspaces/arduino/tests/run.sh pl-workspace-velxio:test
-
-      - name: Build grader
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          target: grader
-          platforms: linux/amd64
-          load: true
-          tags: pl-arduino-grader:test
-          labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=${{ steps.release.outputs.version || github.sha }}
-          cache-from: |
-            type=gha,scope=arduino
-            type=gha,scope=grader
-          cache-to: type=gha,mode=max,scope=grader
+        run: bash workspaces/arduino/tests/run.sh pl-arduino-workspace:dev
 
       - name: Grade template cases
         run: |
           for expected in graders/arduino/tests/cases/*/*/expected.json; do
             cases="${expected%/expected.json}"
             question="course/questions/${cases#graders/arduino/tests/cases/}"
-            python3 scripts/grade.py --image pl-arduino-grader:test --cases "$cases" "$question"
+            python3 scripts/grade.py --image pl-arduino-grader:dev --cases "$cases" "$question"
           done
 
       - name: Log in to Docker Hub
@@ -128,10 +88,10 @@ jobs:
           MAJOR: ${{ steps.release.outputs.major }}
         run: |
           for tag in "arduino-workspace-$VERSION" "arduino-workspace-$MINOR" "arduino-workspace-$MAJOR" arduino-workspace; do
-            docker tag pl-workspace-velxio:test "$DOCKERHUB_IMAGE:$tag"
+            docker tag pl-arduino-workspace:dev "$DOCKERHUB_IMAGE:$tag"
             docker push "$DOCKERHUB_IMAGE:$tag"
           done
           for tag in "arduino-grader-$VERSION" "arduino-grader-$MINOR" "arduino-grader-$MAJOR" arduino-grader; do
-            docker tag pl-arduino-grader:test "$DOCKERHUB_IMAGE:$tag"
+            docker tag pl-arduino-grader:dev "$DOCKERHUB_IMAGE:$tag"
             docker push "$DOCKERHUB_IMAGE:$tag"
           done
