@@ -66,8 +66,12 @@ def _lower(which: int, soft: int, hard: int) -> None:
     resource.setrlimit(which, (soft, hard))
 
 
-COMPILER_LIMITS: Final = Limits(cpu_s=30, memory_bytes=1536 << 20, file_bytes=1 << 30)
-"""Limits for the Arduino CLI and the compilers it runs."""
+COMPILER_LIMITS: Final = Limits(cpu_s=10, memory_bytes=1536 << 20, file_bytes=1 << 30)
+"""Limits for the Arduino CLI and the compilers it runs.
+
+At 0.9 CPU, 10 CPU seconds leaves room in the default 25 s wall-clock budget
+for startup and reporting a runaway compiler as a failed submission.
+"""
 SIMULATOR_LIMITS: Final = Limits(memory_bytes=1 << 30, file_bytes=256 << 20)
 """Limits for avrsim; the time budget bounds how long it runs."""
 
@@ -120,7 +124,7 @@ class Sandbox:
         """Describe a sandbox without creating anything yet.
 
         Args:
-            work_dir: The work directory; ``prepare()`` creates it empty.
+            work_dir: A missing or empty work directory; never cleared by ``prepare()``.
             user: The account to run tools as. The grader must then run as root.
             arduino_data: The Arduino CLI data directory; defaults to the
                 ``ARDUINO_DIRECTORIES_DATA`` environment variable or
@@ -142,8 +146,14 @@ class Sandbox:
 
         Returns:
             This sandbox, for chaining.
+
+        Raises:
+            ValueError: If the work directory is a symlink or is not empty.
         """
-        shutil.rmtree(self.work_dir, ignore_errors=True)
+        if self.work_dir.is_symlink() or (
+            self.work_dir.exists() and (not self.work_dir.is_dir() or any(self.work_dir.iterdir()))
+        ):
+            raise ValueError(f"Work directory must be empty and not a symlink: {self.work_dir}")
         for name in ["sketch", "home", "user", "downloads", "cache"]:
             (self.work_dir / name).mkdir(parents=True)
         for path in [self.work_dir, *self.work_dir.rglob("*")]:

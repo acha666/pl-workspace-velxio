@@ -189,6 +189,7 @@ def test_counts(trace, check):
 
 ## How grading runs
 
+- `--work-dir` (default `/tmp/arduinograder`) must name a missing or empty directory, not a symlink. Existing contents are never deleted; choose a new directory for each local run, or remove the previous run's artifacts yourself.
 - `python -m arduinograder`, the image's entrypoint, grades the submission under `/grade` with `/grade/tests/test.py` and writes `results/results.json`; name another test file to use it instead. With `--sketch FILE` (and optionally `--params JSON`) it grades that file and prints the results. A test file ending in `if __name__ == "__main__": ag.main()` can be run directly the same way; keep the guard, as the grader imports the file.
 - The contents of `/grade`, except `results/`, are made readable only by root. Compilation and simulation run as `sbuser`, so a sketch cannot `#include` the tests or `data.json`. Never put solutions in `tests/`. The grader refuses to grade `/grade` when it is not root, so an image started as another user fails loudly instead of exposing the tests.
 - The compiler and simulator start under generous per-process limits on CPU time, memory and file size. A sketch whose compilation hits one scores 0 with that explanation, and the grader itself stays up.

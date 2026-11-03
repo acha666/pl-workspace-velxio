@@ -89,7 +89,10 @@ def _run(argv: Sequence[str] | None, module: ModuleType | None) -> int:
         "--grade-dir", type=Path, default=GRADE_DIR, help="PrairieLearn's grading directory"
     )
     parser.add_argument(
-        "--work-dir", type=Path, default=WORK_DIR, help="where to compile and simulate"
+        "--work-dir",
+        type=Path,
+        default=WORK_DIR,
+        help="where to compile and simulate; must be missing or empty, and not a symlink",
     )
     parser.add_argument(
         "--sketch",

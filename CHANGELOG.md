@@ -13,6 +13,7 @@ The grader's test API is redesigned, and the repository is laid out for more tha
 
 ### Grader
 
+- Work directories must be missing or empty and cannot be symlinks; `--work-dir` never deletes existing contents. The compiler CPU limit is 10 s, leaving room to report a failed compilation within the default 25 s wall-clock budget at 0.9 CPU.
 - Tests are functions decorated with `@ag.points()` that receive fixtures such as `trace`, `simulate`, `session`, `check` and `source` by naming them as parameters. Each test runs on its own, so an error fails only that test; returning a number from 0 to 1, such as `check.fraction`, gives partial credit. `gates` and `@ag.gate` functions run first and can stop grading with zero points.
 - The `session` fixture runs the sketch step by step, so a test can react to it: `wait_for()` a pin change or `wait_for_line()` from Serial, then `pulse()`, `set()`, `analog()` or `send()`. Waits hand out what the program did in order, at once when it has already happened, so a reaction during a `pulse()` is not missed and a line printed before an input is not taken for its reply. `avrsim` is now a long-running process driven over stdin and stdout.
 - `pulse(pin, level, ...)` drives a pin and then releases it, and `release(pin)` releases it alone. A released pin reads like an unconnected one, HIGH under `INPUT_PULLUP` and LOW without it, so a test can catch a missing pull-up. `Scenario.send()` writes to the sketch's Serial at one byte per millisecond.

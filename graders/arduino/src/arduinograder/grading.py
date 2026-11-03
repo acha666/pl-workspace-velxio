@@ -263,7 +263,7 @@ def grade(
 ) -> Results:
     """Grade the submission under ``grade_dir`` with a test module.
 
-    The module may set ``TIME_BUDGET_S`` (default 45) and ``SKETCH_FILE``
+    The module may set ``TIME_BUDGET_S`` (default 25) and ``SKETCH_FILE``
     (default: ``sketch.ino``, else the only ``.ino`` submitted). Whatever
     happens, ``results/results.json`` is written.
 
@@ -275,7 +275,8 @@ def grade(
     Args:
         module: A loaded test module, or the path of one.
         grade_dir: PrairieLearn's grading directory.
-        work_dir: Where sketches are compiled and simulated.
+        work_dir: Where sketches are compiled and simulated; must be missing or
+            empty, and not a symlink. Existing contents are never deleted.
         sandbox: The sandbox to use; by default one in ``work_dir`` that runs
             as the sandbox user when root.
 
