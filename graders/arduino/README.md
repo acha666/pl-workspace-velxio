@@ -91,10 +91,10 @@ Pins are Uno numbers 0-19 or `"A0"`-`"A5"`; times are milliseconds from reset.
   - `.at(ms)` is a `PinState`: `HIGH`, `LOW`, `INPUT` or `INPUT_PULLUP`, with `.is_high`, `.is_low`, `.is_output`, `.is_input` and `.level` (1, 0 or `None` for an input).
   - `.level(ms)` is that level directly; `trace.levels(pins, at_ms)` gives a tuple for several pins.
   - `.changes(start_ms, end_ms)` lists every `Change(time_ms, state)`, including mode changes.
-  - `.edges(start_ms, end_ms)` lists the `Edge(time_ms, level)` where the output level flipped, with `.rising()`, `.falling()`, `.times_ms`, `.intervals_ms()`, `.match(times_ms, tolerance_ms=)`, `.periodic(period_ms, tolerance_ms=)` and `.describe()` for messages.
+  - `.edges(start_ms, end_ms)` lists the `Edge(time_ms, level)` where the output level flipped, with `.rising()`, `.falling()`, `.times_ms`, `.intervals_ms()`, `.match(times_ms, tolerance_ms=)`, `.periodic(period_ms, tolerance_ms=)` and `.describe()` for messages. `match()` and `periodic()` compare times only; to check the direction too, match `.rising()` and `.falling()` separately, or a blink in the wrong phase passes. Edges are between output levels only: a pin switched straight from an input to a HIGH output has no rising edge there.
   - `.high_fraction(start_ms, end_ms)` is the share of the interval the pin was driven HIGH; `.stable(start_ms, end_ms)` is true if it did not change.
 - `.serial.text(start_ms, end_ms)`, `.serial.lines(...)` as `Line(time_ms, text)` timed by each newline, and `.serial.bytes(...)`.
-- `.end_ms` and `.stop_reason`, which is `"end"` unless the program crashed or exceeded a limit. Asking about a later time then raises `SimulationStopped`, which fails the current test with an explanation. Asking about a time after the scenario ends is a mistake in the test and raises `ValueError`.
+- `.end_ms` and `.stop_reason`, which is `"end"` unless the program crashed, exceeded a limit or finished (`"done"`: `exit()`, or an endless loop or sleep with interrupts disabled). Asking about a later time then raises `SimulationStopped`, which fails the current test with an explanation. Asking about a time after the scenario ends is a mistake in the test and raises `ValueError`.
 
 `analogWrite()` output is not recorded, so do not grade it: on pins 3, 9, 10 and 11, values 1-254 read as LOW; pins 5 and 6 record the raw 976 Hz waveform, whose edges count toward `max_pin_changes`.
 
@@ -117,7 +117,7 @@ def test_responds_to_the_button(session):
 
 - `.run_until(ms)` and `.run_for(ms)` advance time; they return `False` once the program has stopped.
 - `.set()`, `.release()`, `.analog()`, `.send()` and `.pulse(pin, level, duration_ms=)` as in `Scenario`, applied now; `pulse()` advances time by its duration.
-- `.wait_for(pin, state=None, timeout_ms=)` returns the time of the pin's first change (to `state`, if given) not returned before: at once if it has already happened, which may be before `now_ms`, else after running until it happens; `None` on timeout.
+- `.wait_for(pin, state=None, timeout_ms=)` returns the time of the pin's first change (to `state`, if given) not returned before: at once if it has already happened, which may be before `now_ms`, else after running until it happens; `None` on timeout. The timeout counts from `now_ms`; `pulse()` has already advanced time by its duration, so a wait after it starts at the release.
 - `.wait_for_line(timeout_ms=)` does the same for the program's Serial lines.
 - An input through `set()`, `analog()`, `send()` or `pulse()` starts the waits afresh: what the program did before it is not a reaction to it, so they skip that; a line in progress is kept whole. `release()` ends an input and does not.
 - `.now_ms`, `.state(pin)`, `.running`, `.stop_reason`, and `.trace`, the `Trace` of everything so far, for checks over the whole run.
@@ -192,7 +192,7 @@ def test_counts(trace, check):
 - `python -m arduinograder`, the image's entrypoint, grades the submission under `/grade` with `/grade/tests/test.py` and writes `results/results.json`; name another test file to use it instead. With `--sketch FILE` (and optionally `--params JSON`) it grades that file and prints the results. A test file ending in `if __name__ == "__main__": ag.main()` can be run directly the same way; keep the guard, as the grader imports the file.
 - The contents of `/grade`, except `results/`, are made readable only by root. Compilation and simulation run as `sbuser`, so a sketch cannot `#include` the tests or `data.json`. Never put solutions in `tests/`. The grader refuses to grade `/grade` when it is not root, so an image started as another user fails loudly instead of exposing the tests.
 - The compiler and simulator start under generous per-process limits on CPU time, memory and file size. A sketch whose compilation hits one scores 0 with that explanation, and the grader itself stays up.
-- Simulation uses simulated time only: the same sketch and inputs always give the same trace, whatever the server load. A wall-clock overrun means the server was too slow; the submission is reported as ungradable rather than scored.
+- Simulation uses simulated time only: the same sketch and inputs always give the same trace, whatever the server load. A wall-clock overrun means the server was too slow; the submission is reported as ungradable rather than scored. Simulating takes about a tenth of the simulated time on one CPU: a 10 s scenario takes about a second.
 - The grader drives and reads the microcontroller's pins directly and does not simulate the Velxio circuit. Questions fix the wiring and the pin numbers their tests use; the submitted `project.vlx` is not graded.
 
 ## Project layout
