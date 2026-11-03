@@ -11,6 +11,7 @@ import pytest
 from arduinograder import cli, grading, pl, rubric
 from arduinograder.errors import INTERNAL_ERROR_MESSAGE
 from arduinograder.pl import Results
+from arduinograder.rubric import ItemResult
 
 
 def module_from(source: str) -> types.ModuleType:
@@ -81,6 +82,17 @@ def test_main_defaults_to_the_tests_under_the_grading_directory(
     assert json.loads(capsys.readouterr().out)["score"] == 1.0
     with pytest.raises(SystemExit):
         cli.main(["--grade-dir", str(tmp_path / "elsewhere"), *work, "--sketch", str(sketch)])
+
+
+def test_results_with_nan_are_written_as_ungradable(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    results = Results()
+    results.add(ItemResult("Nan", float("nan"), 1))
+    results.write(tmp_path)
+    written = json.loads((tmp_path / "results/results.json").read_text())
+    assert written["gradable"] is False and written["message"] == INTERNAL_ERROR_MESSAGE
+    assert "ValueError" in capsys.readouterr().err
 
 
 def test_loading_a_test_module_works_like_running_it(tmp_path: Path) -> None:

@@ -11,10 +11,11 @@ from __future__ import annotations
 
 import json
 import os
+import traceback
 from pathlib import Path
 from typing import Any, Final, TypedDict
 
-from .errors import Ungradable
+from .errors import INTERNAL_ERROR_MESSAGE, Ungradable
 from .rubric import ItemResult, TestResultDict
 
 GRADE_DIR: Final = Path("/grade")
@@ -149,10 +150,22 @@ class Results:
         }
 
     def write(self, grade_dir: str | os.PathLike[str]) -> None:
-        """Write ``results/results.json`` under the grading directory."""
+        """Write ``results/results.json`` under the grading directory.
+
+        PrairieLearn cannot parse ``NaN`` or ``Infinity``, so a result holding
+        one is written as ungradable with the internal error message instead.
+        """
         path = Path(grade_dir) / "results/results.json"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(self.to_dict()), encoding="utf-8")
+        try:
+            text = json.dumps(self.to_dict(), allow_nan=False)
+        except ValueError:
+            traceback.print_exc()
+            failed = Results()
+            failed.gradable = False
+            failed.add_message(INTERNAL_ERROR_MESSAGE)
+            text = json.dumps(failed.to_dict())
+        path.write_text(text, encoding="utf-8")
 
 
 def protect(grade_dir: Path) -> None:

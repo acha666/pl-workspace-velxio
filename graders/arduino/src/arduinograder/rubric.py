@@ -8,6 +8,7 @@ failing or broken test never affects the others.
 from __future__ import annotations
 
 import inspect
+import math
 import traceback
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -332,6 +333,6 @@ def _fraction(outcome: object, check: Check) -> float:
         return 1.0 if check.ok else 0.0
     if isinstance(outcome, bool):
         return 1.0 if outcome else 0.0
-    if isinstance(outcome, int | float):
+    if isinstance(outcome, int | float) and math.isfinite(outcome):
         return min(max(float(outcome), 0.0), 1.0)
     raise TypeError(f"A test must return None, a bool or a fraction, not {outcome!r}.")

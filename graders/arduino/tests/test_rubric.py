@@ -239,6 +239,26 @@ def test_mistakes_in_the_test_module_make_every_submission_ungradable(
         assert "ConfigurationError" in capsys.readouterr().err
 
 
+def test_returned_fractions_must_be_finite(tmp_path: Path) -> None:
+    module = module_from(
+        """
+import arduinograder as ag
+scenario = ag.Scenario(duration_ms=2000)
+
+@ag.points(1)
+def test_nan(trace):
+    return float("nan")
+
+@ag.points(1)
+def test_inf(trace):
+    return float("inf")
+"""
+    )
+    results = FakeGrading(module, tmp_path).run().to_dict()
+    assert [test["message"] for test in results["tests"]] == [rubric.GRADER_ERROR_MESSAGE] * 2
+    assert results["score"] == 0
+
+
 def test_a_time_budget_that_is_not_a_positive_number_is_a_configuration_error(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
