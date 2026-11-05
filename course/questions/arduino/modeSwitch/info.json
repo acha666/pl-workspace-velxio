@@ -1,0 +1,20 @@
+{
+  "uuid": "613003ef-51ff-4811-b5ed-9b0d11d2000d",
+  "title": "Arduino: Mode switch",
+  "type": "v3",
+  "singleVariant": true,
+  "gradingMethod": "External",
+  "showCorrectAnswer": false,
+  "workspaceOptions": {
+    "image": "acha666/pl-workspace-velxio:arduino-workspace-3.0.0",
+    "enableNetworking": false,
+    "gradedFiles": [
+      "project.vlx"
+    ]
+  },
+  "externalGradingOptions": {
+    "image": "acha666/pl-workspace-velxio:arduino-grader-3.0.0",
+    "timeout": 60
+  },
+  "topic": "Arduino"
+}

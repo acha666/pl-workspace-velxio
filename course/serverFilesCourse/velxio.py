@@ -32,11 +32,7 @@ def extract_sketch(encoded_project):
         raise ValueError("Expected one Arduino Uno.")
     groups = project.get("fileGroups")
     group_id = board.get("activeFileGroupId")
-    if (
-        not isinstance(groups, dict)
-        or len(groups) != 1
-        or not isinstance(group_id, str)
-    ):
+    if not isinstance(groups, dict) or len(groups) != 1 or not isinstance(group_id, str):
         raise ValueError("Expected one file group.")
     files = groups.get(group_id)
     if not isinstance(files, list) or len(files) != 1:
@@ -53,14 +49,21 @@ def extract_sketch(encoded_project):
 
 
 def parse(data):
-    # PrairieLearn collects gradedFiles before parse(). Never read the live workspace.
+    """Replace the submitted files with the project snapshot and the sketch extracted from it."""
+    # PrairieLearn collects gradedFiles before parse(); never read the live workspace.
     submitted_files = data["submitted_answers"].get("_files", [])
     if not isinstance(submitted_files, list) or any(
         not isinstance(file, dict) for file in submitted_files
     ):
-        data["format_errors"].setdefault("_files", []).append(
-            "Invalid submitted files."
-        )
+        data["format_errors"].setdefault("_files", []).append("Invalid submitted files.")
+        return
+
+    # PrairieLearn adds _files from the workspace's graded files after copying
+    # the request into raw_submitted_answers, so _files there came from the
+    # client and could get another sketch graded than the one in its project.
+    if "_files" in data.get("raw_submitted_answers", {}):
+        data["submitted_answers"]["_files"] = []
+        data["format_errors"].setdefault("_files", []).append("Invalid submitted files.")
         return
 
     # Discard any supplied or previously derived preview, even on invalid submissions.
@@ -74,6 +77,9 @@ def parse(data):
             "then click Save on PrairieLearn."
         )
         return
+    if len(data["submitted_answers"]["_files"]) != 1:
+        data["format_errors"].setdefault("_files", []).append("Invalid submitted files.")
+        return
 
     try:
         source = extract_sketch(projects[0].get("contents"))
@@ -86,6 +92,4 @@ def parse(data):
 
     pl.add_submitted_file(data, "sketch.ino", raw_contents=source)
     # Present the extracted sketch before the project snapshot.
-    data["submitted_answers"]["_files"].sort(
-        key=lambda file: file.get("name") != "sketch.ino"
-    )
+    data["submitted_answers"]["_files"].sort(key=lambda file: file.get("name") != "sketch.ino")

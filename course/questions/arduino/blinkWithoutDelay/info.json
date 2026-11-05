@@ -6,13 +6,12 @@
   "gradingMethod": "External",
   "showCorrectAnswer": false,
   "workspaceOptions": {
-    "image": "acha666/pl-workspace-velxio:arduino-workspace-2.0.0",
+    "image": "acha666/pl-workspace-velxio:arduino-workspace-3.0.0",
     "enableNetworking": false,
     "gradedFiles": ["project.vlx"]
   },
   "externalGradingOptions": {
-    "image": "acha666/pl-workspace-velxio:arduino-grader-2.0.0",
-    "entrypoint": "python3 /grade/tests/test.py",
+    "image": "acha666/pl-workspace-velxio:arduino-grader-3.0.0",
     "timeout": 60
   },
   "topic": "Arduino"

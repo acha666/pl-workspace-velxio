@@ -23,9 +23,12 @@ def docker(*args, **kwargs):
 
 def grade(question, image, sketch, name):
     options = json.loads((question / "info.json").read_text())["externalGradingOptions"]
-    entrypoint = options.get("entrypoint", "python3 /grade/tests/test.py")
+    # The image's own entrypoint applies, as in PrairieLearn, unless the question sets one.
+    entrypoint = options.get("entrypoint")
     if isinstance(entrypoint, str):
         entrypoint = shlex.split(entrypoint)
+    entrypoint_option = ["--entrypoint", entrypoint[0]] if entrypoint else []
+    command = entrypoint[1:] if entrypoint else []
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
         files = root / "grade"
@@ -38,7 +41,7 @@ def grade(question, image, sketch, name):
         # a directory that the root-run grader would chmod.
         container = docker(
             "create", "--network", "none", "--cpus", "0.9", "--memory", "2g",
-            "--entrypoint", entrypoint[0], image, *entrypoint[1:],
+            *entrypoint_option, image, *command,
             capture_output=True, text=True,
         ).stdout.strip()  # fmt: skip
         try:
@@ -73,16 +76,14 @@ def describe(results):
         return "no result"
     if not results["gradable"]:
         return "ungradable"
-    return f"score {results['score']:.3f}"
+    return f"score {results['score']:.4f}"
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("question", type=Path, help="question directory")
     parser.add_argument("sketches", type=Path, nargs="*", help="sketches to grade")
-    parser.add_argument(
-        "--cases", type=Path, help="directory of sketches and their expected.json"
-    )
+    parser.add_argument("--cases", type=Path, help="directory of sketches and their expected.json")
     parser.add_argument("--image", help="grader image (default: from info.json)")
     parser.add_argument("--name", default="sketch.ino", help="submitted file name")
     parser.add_argument("--verbose", action="store_true", help="print full results")
@@ -92,9 +93,7 @@ def main():
     question = args.question.resolve()
     image = (
         args.image
-        or json.loads((question / "info.json").read_text())["externalGradingOptions"][
-            "image"
-        ]
+        or json.loads((question / "info.json").read_text())["externalGradingOptions"]["image"]
     )
 
     if args.sketches:
@@ -113,20 +112,14 @@ def main():
             passed = results is not None and results["gradable"] is False
         else:
             passed = (
-                results is not None
-                and results["gradable"]
-                and abs(results["score"] - score) < 1e-9
+                results is not None and results["gradable"] and abs(results["score"] - score) < 1e-9
             )
         failures += not passed
-        wanted = "ungradable" if score is None else f"score {score:.3f}"
-        print(
-            f"{'ok  ' if passed else 'FAIL'} {case}: {describe(results)} (expected {wanted})"
-        )
+        wanted = "ungradable" if score is None else f"score {score:.4f}"
+        print(f"{'ok  ' if passed else 'FAIL'} {case}: {describe(results)} (expected {wanted})")
         if not passed or args.verbose:
             print(json.dumps(results, indent=2) if results else log)
-    print(
-        f"{question.name}: {len(expected) - failures}/{len(expected)} cases as expected"
-    )
+    print(f"{question.name}: {len(expected) - failures}/{len(expected)} cases as expected")
     return 1 if failures else 0
 
 

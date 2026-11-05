@@ -1,0 +1,33 @@
+# Root of the uv workspace. Each grader is a member project under graders/;
+# each workspace image's sources live under workspaces/. Lint settings here
+# apply to every member; type checking and tests are configured per member.
+# The root's dev group and pytest settings serve the course tests in tests/.
+
+[tool.uv.workspace]
+members = ["graders/*"]
+
+[dependency-groups]
+dev = ["pytest>=9.2.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["workspaces/arduino/adapter", "workspaces/arduino/tests/browser"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF", "D"]
+ignore = ["D105", "D107"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["arduinograder", "conftest"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*" = ["D"]
+"scripts/*" = ["D"]
+"course/**" = ["D"]

@@ -1,6 +1,9 @@
-.build*/
 .upstream/
 __pycache__/
 .pytest_cache/
 node_modules/
 test-results/
+.venv/
+.mypy_cache/
+.ruff_cache/
+.coverage

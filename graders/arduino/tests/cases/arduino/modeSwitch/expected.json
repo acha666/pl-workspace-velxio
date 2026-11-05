@@ -1,0 +1,9 @@
+{
+  "reference.ino": 1.0,
+  "static-period.ino": 0.9285714285714286,
+  "no-debounce.ino": 0.7142857142857143,
+  "click-on-press.ino": 0.7142857142857143,
+  "no-pullup.ino": 0.07256235827664399,
+  "uses-delay.ino": 0.0,
+  "compile-error.ino": 0.0
+}

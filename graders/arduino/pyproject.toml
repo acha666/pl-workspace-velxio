@@ -1,0 +1,38 @@
+[project]
+name = "arduinograder"
+version = "3.0.0"
+description = "Grade Arduino Uno sketches for PrairieLearn by compiling them and simulating their inputs."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "AGPL-3.0-only"
+dependencies = [
+    "tree-sitter==0.25.2",
+    "tree-sitter-cpp==0.23.4",
+]
+
+[project.scripts]
+arduinograder = "arduinograder.cli:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]
+
+[build-system]
+requires = ["hatchling>=1.33.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/arduinograder"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src", "tests"]
+warn_unreachable = true

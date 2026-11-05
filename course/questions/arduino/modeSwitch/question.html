@@ -1,0 +1,40 @@
+<pl-question-panel>
+  <markdown>
+The supplied circuit has a push button on pin 2 to ground, three LEDs on pins 13, 9 and 7 through
+220-ohm resistors, and a potentiometer on A0. Program a mode switch with four modes:
+
+| Mode | LEDs                                                            |
+| ---- | --------------------------------------------------------------- |
+| 0    | all off                                                         |
+| 1    | pin 13 on                                                       |
+| 2    | pin 9 on                                                        |
+| 3    | pin 7 blinks with a period set by the potentiometer, see below |
+
+- Configure the button pin with `INPUT_PULLUP`; it reads `LOW` while pressed. Debounce it: a level
+  counts only once it has held for 30 ms.
+- A **click**, a press released within a second, moves to the next mode; from mode 3 it returns to
+  mode 0. Count the click when the button is released.
+- A press **held for a second** returns to mode 0 at once; releasing it afterwards does nothing.
+- Print `ready` on Serial (9600 baud) in `setup()`, and `mode N` on every mode change. The line
+  `mode N` received on Serial sets mode N.
+- In mode 3, read the potentiometer continuously: the blink period is 100 ms at 0 and 1000 ms at
+  1023 (`map(analogRead(A0), 0, 1023, 100, 1000)`), with the LED on for half of it.
+
+Use `millis()` for all timing; do not call `delay()`. Edit `sketch.ino` and run the simulation to
+try the button, the potentiometer and the serial monitor. Do not change the supplied circuit and
+project structure.
+
+## Submission
+
+The workspace saves automatically. When the save icon above its file list is green, return here and
+click **Save & Grade** on this page. The autograder compiles the submitted sketch, simulates it with
+button presses, serial input and potentiometer settings. Check the results,
+the extracted `sketch.ino` and the submitted `project.vlx` below. Repeat after further edits.
+  </markdown>
+  <pl-workspace></pl-workspace>
+</pl-question-panel>
+
+<pl-submission-panel>
+  <pl-external-grader-results></pl-external-grader-results>
+  <pl-file-preview></pl-file-preview>
+</pl-submission-panel>

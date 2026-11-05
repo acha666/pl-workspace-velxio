@@ -1,7 +1,9 @@
 .git
-.build*
 .upstream
 **/node_modules
 **/__pycache__
 **/.pytest_cache
 test-results
+**/.venv
+**/.mypy_cache
+**/.ruff_cache
