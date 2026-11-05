@@ -6,7 +6,7 @@ The grader's test API is redesigned, and the repository is laid out for several 
 
 ### Upgrading from 2.0.0
 
-- Rewrite `tests/test.py` as test functions; the `ArduinoGrader` class is gone. `blinkWithoutDelay` shows the conversion.
+- Rewrite `tests/test.py` as test functions; the `ArduinoGrader` class is gone, and its `time_budget_s` becomes the module setting `TIME_BUDGET_S`, 25 s by default. `blinkWithoutDelay` shows the conversion.
 - Remove `entrypoint` from `externalGradingOptions`; the image's entrypoint grades with `/grade/tests/test.py`.
 - `trace.state(pin, ms)` becomes `trace.pin(pin).at(ms)`; `level()` and `changes()` move to `trace.pin(pin)` too, and `serial_text()`/`serial_lines()` become `trace.serial.text()`/`.lines()`.
 - `Scenario.press()` becomes `pulse()`, `forbid_calls()` becomes `gates = [no_calls(...)]`, and `find_calls()` takes names as positional arguments.
@@ -14,13 +14,12 @@ The grader's test API is redesigned, and the repository is laid out for several 
 ### Grader
 
 - Tests are functions decorated with `@ag.points()` that receive fixtures by name: `trace`, `simulate`, `session`, `check`, `source` and more. Each runs on its own; a returned fraction gives partial credit.
-- `gates` and `@ag.gate` functions run first and stop grading with zero points; a compile error does the same before any test.
+- `gates` and `@ag.gate` functions run first and stop grading with zero points, as does a compile error; a mistake in the test module makes the submission ungradable.
 - The `session` fixture drives the sketch step by step: `wait_for()` a pin change or `wait_for_line()`, then `pulse()`, `set()`, `analog()` or `send()`; waits never miss a reaction.
 - `pulse()` and `release()` leave a pin reading like an unconnected one, HIGH under `INPUT_PULLUP` and LOW without it, so a missing pull-up shows.
 - `Trace` is typed: `PinState` has `.is_high` and `.level`; `edges()` has `.match()`, `.periodic()` and `.describe()`; Serial and interval queries take time windows.
-- `--sketch FILE` grades a local file and prints the results; `TIME_BUDGET_S` defaults to 25 s; `--work-dir` must be missing or empty.
-- The compiler and simulator run under CPU, memory and file-size limits; a compilation that hits one scores 0 with an explanation.
-- Mistakes in the test module make submissions ungradable rather than scoring 0; feedback is capped at 8000 characters; points are not rounded.
+- `--sketch FILE` grades a local file and prints the results; the work directory is no longer cleared, so name an unused `--work-dir` for each local run.
+- The compiler and simulator run under CPU, memory and file-size limits; a compilation that hits one scores 0 with an explanation. Feedback is capped at 8000 characters.
 
 ### Questions
 
