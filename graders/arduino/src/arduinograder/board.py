@@ -1,7 +1,7 @@
 """Arduino Uno pins and simulated time.
 
-Tests name pins by Uno number (0-19) or analog name (``"A0"`` to ``"A5"``)
-and give times in milliseconds from reset. The simulator counts CPU cycles at
+Tests name pins by Uno number (0-19) or analog name (``"A0"`` to ``"A5"``) and
+give times in milliseconds from reset; the simulator counts CPU cycles at
 16 MHz, and this module converts between the two.
 """
 
@@ -24,19 +24,13 @@ ANALOG_PINS: Final[Mapping[str, int]] = {f"A{channel}": 14 + channel for channel
 """Uno pin numbers of the analog inputs ``"A0"`` to ``"A5"``."""
 
 PinLike: TypeAlias = int | str
-"""A pin given as an Uno number or as a name such as ``"13"`` or ``"A0"``."""
+"""A pin as an Uno number or a name such as ``"13"`` or ``"A0"``."""
 Level: TypeAlias = Literal[0, 1]
 """An output level: 1 for HIGH, 0 for LOW."""
 
 
 def pin_number(pin: PinLike) -> int:
-    """Return the Uno pin number for a pin given in any accepted form.
-
-    Args:
-        pin: An Uno pin number 0-19, or its name such as ``"13"`` or ``"A0"``.
-
-    Returns:
-        The pin number, 0-19.
+    """Return the Uno pin number for a pin given as a number 0-19 or a name such as ``"A0"``.
 
     Raises:
         ValueError: If ``pin`` is not an Uno pin.

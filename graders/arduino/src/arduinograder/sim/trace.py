@@ -149,9 +149,9 @@ class Record(NamedTuple):
 
 
 class SimulationStopped(Exception):
-    """A check asked about a time after the program stopped being simulated.
+    """A check asked about a time after the simulation ended early.
 
-    The message explains to the student why the simulation ended early.
+    The message explains to the student why it ended.
     """
 
 
@@ -191,8 +191,8 @@ class Edges(list[Edge]):
     def describe(self) -> str:
         """Return the edge times for a message: ``"500 ms, 1000 ms"``, or ``"never"``.
 
-        A pin that flips without end would make an endless message, so only
-        the first ``MAX_DESCRIBED`` times are listed, then how many follow.
+        Only the first ``MAX_DESCRIBED`` times are listed, then how many follow, as a
+        pin flipping without end would make an endless message.
         """
         times = [f"{edge.time_ms:.0f} ms" for edge in self[:MAX_DESCRIBED]]
         if len(self) > MAX_DESCRIBED:
@@ -249,8 +249,8 @@ class PinTrace:
     def edges(self, start_ms: float = 0, end_ms: float | None = None) -> Edges:
         """Return the edges in ``[start_ms, end_ms]`` where the output level flipped.
 
-        Changing between input and output is not an edge: a pin driven HIGH,
-        released, then driven LOW has one falling edge at the LOW time.
+        A change between input and output is not an edge: a pin driven HIGH, released,
+        then driven LOW has one falling edge, at the LOW time.
         """
         start, end = self._window(start_ms, end_ms)
         edges, level = Edges(), None
@@ -347,9 +347,9 @@ class Trace:
     """Pin states and Serial output recorded while a program ran.
 
     Attributes:
-        stop_reason: ``"end"`` when the program ran to the end of its scenario
-            or session; otherwise why the simulation ended early. Asking about
-            a time after an early end raises ``SimulationStopped``.
+        stop_reason: ``"end"`` when the program ran to the end of its scenario or
+            session, else why the simulation ended early; asking about a later
+            time then raises ``SimulationStopped``.
         max_pin_changes: The pin change limit in force, for messages.
         max_serial_bytes: The Serial byte limit in force, for messages.
     """

@@ -1,9 +1,9 @@
 """The ``arduinograder`` command: grade under PrairieLearn, or a sketch locally.
 
-``python -m arduinograder`` and the ``arduinograder`` script both run
-``main()``. Without arguments it grades PrairieLearn's ``/grade`` with
-``/grade/tests/test.py``; with ``--sketch FILE`` it grades that file in a
-temporary grading directory and prints the results.
+``python -m arduinograder`` and the ``arduinograder`` script both run ``main()``,
+which grades PrairieLearn's ``/grade`` with ``/grade/tests/test.py`` unless told
+otherwise, or with ``--sketch FILE`` grades that file in a temporary grading
+directory and prints the results.
 """
 
 from __future__ import annotations
@@ -27,10 +27,9 @@ def _test_module(
 ) -> ModuleType | str | None:
     """Return the test module to grade with, or ``None`` if there is none.
 
-    In order: the file named on the command line, the module the caller
-    gave, the running script when it defines tests (a test file ending in
-    ``main()``), and ``tests/test.py`` under the grading directory, which
-    is PrairieLearn's layout and the image's default.
+    In order: the file named on the command line, the module the caller gave, the
+    running script when it defines tests (a test file ending in ``main()``), and
+    ``tests/test.py`` under the grading directory, the image's default.
     """
     if tests:
         return tests
@@ -51,12 +50,9 @@ def main(argv: Sequence[str] | None = None, module: ModuleType | None = None) ->
     """Grade as PrairieLearn's entry point, or a sketch locally with ``--sketch``.
 
     Without a ``tests`` argument, grades with ``module``, with the running
-    ``__main__`` module when it is a test file ending in ``ag.main()``, or
-    else with ``tests/test.py`` under the grading directory.
-
-    A test file that calls ``main()`` at import, without the ``__main__``
-    guard, would otherwise grade again from inside ``grade()``: such a
-    nested call returns at once.
+    ``__main__`` module when it is a test file ending in ``ag.main()``, or else with
+    ``tests/test.py`` under the grading directory. A nested call, from a test file
+    that calls ``main()`` at import without the ``__main__`` guard, returns at once.
 
     Args:
         argv: Command-line arguments; by default ``sys.argv[1:]``.

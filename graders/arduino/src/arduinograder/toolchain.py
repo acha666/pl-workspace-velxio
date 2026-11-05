@@ -15,7 +15,7 @@ from .sandbox import COMPILER_LIMITS, Budget, Limits, Sandbox
 MAX_COMPILE_LOG: Final = 4000
 """Characters of compiler output shown to the student at most."""
 MAX_ERRORS: Final = 20
-"""Errors after which the compiler stops: the first ones matter, and the log stays short."""
+"""Errors after which the compiler stops, keeping the log short; the first ones matter most."""
 NOISE: Final = re.compile(
     r"^(Sketch uses|Global variables use|Used platform|Used library|arduino:avr|"
     r"Error during build|exit status|Please submit a full bug report|"
@@ -82,7 +82,6 @@ class Compiler:
         fqbn: str = FQBN,
         limits: Limits = COMPILER_LIMITS,
     ) -> None:
-        """Bind a compiler to a sandbox and a budget."""
         self.sandbox = sandbox
         self.budget = budget
         self.fqbn = fqbn
@@ -94,11 +93,11 @@ class Compiler:
 
         Args:
             source: The sketch's text.
-            name: The student's file name, shown in place of the work path in
-                compiler messages.
+            name: The student's file name, shown in place of the work path in compiler messages.
 
         Returns:
-            The compiled firmware.
+            The compiled firmware, in a file of its own, as a test may compile a
+            reference sketch too.
 
         Raises:
             CompileError: If the sketch did not compile or hit a resource limit.
@@ -124,8 +123,7 @@ class Compiler:
         firmware = build / "sketch.ino.elf"
         if not firmware.is_file():
             raise RuntimeError(f"arduino-cli produced no firmware:\n{log}")
-        # The next compilation reuses the build directory, so keep this
-        # firmware apart from it: a test may compile a reference sketch too.
+        # The next compilation reuses the build directory.
         kept = self.sandbox.path(f"firmware-{next(self._builds)}.elf")
         shutil.copyfile(firmware, kept)
         return Firmware(kept, log)

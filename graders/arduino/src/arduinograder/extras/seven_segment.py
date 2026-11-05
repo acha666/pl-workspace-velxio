@@ -11,7 +11,7 @@ from ..sim.trace import Trace
 
 
 class Segment(enum.Flag):
-    """A set of segments: A-G and the decimal point DP.
+    """A set of segments, A-G and the decimal point DP.
 
     Bit n is segment n in Velxio's A-G, DP order, so ``Segment(0x3F)`` is a 0.
     """
@@ -33,7 +33,7 @@ class Segment(enum.Flag):
 
 
 class SevenSegment:
-    """One digit with segments A-G and DP on the given pins, in that order.
+    """One digit whose segments A-G and DP are on the given pins, in that order.
 
     Which segments count as which digit is up to each question.
 
@@ -65,7 +65,7 @@ class SevenSegment:
         self.lit_level: Level = 1 if common == "cathode" else 0
 
     def segments(self, trace: Trace, at_ms: float) -> Segment:
-        """Return the lit segments at a time. Unwired segments and input pins are off."""
+        """Return the lit segments at a time, counting unwired segments and input pins as off."""
         lit = Segment(0)
         for segment, pin in zip(Segment.__members__.values(), self.pins, strict=True):
             if pin is not None and trace.pin(pin).level(at_ms) == self.lit_level:

@@ -1,10 +1,10 @@
 """PrairieLearn's external grader layout: ``/grade`` in, ``results/results.json`` out.
 
-PrairieLearn starts the grader image with the submitted files under
-``/grade/student``, the question's ``tests/`` and ``data/data.json`` beside
-them, and reads ``/grade/results/results.json`` when the container exits.
-``Submission`` reads that layout, ``Results`` writes it, and ``protect()``
-keeps it from the sandbox user.
+PrairieLearn starts the image with the submitted files under ``/grade/student``,
+the question's ``tests/`` and ``data/data.json`` beside them, and reads
+``/grade/results/results.json`` when the container exits; ``Submission`` reads
+that layout, ``Results`` writes it, and ``protect()`` hides it from the sandbox
+user.
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ GRADE_DIR: Final = Path("/grade")
 MAX_MESSAGE_CHARS: Final = 8000
 """Characters kept of each test's message and of the overall one.
 
-PrairieLearn rejects results over 1 MiB, and a message that echoes what a
-sketch did can grow without bound.
+A message echoing a runaway sketch could otherwise push ``results.json`` past
+PrairieLearn's 1 MiB limit.
 """
 
 
@@ -61,8 +61,7 @@ class Submission:
 
         Args:
             grade_dir: The grading directory with ``student/`` and ``data/``.
-            sketch_file: The submitted file to grade; by default ``sketch.ino``,
-                else the only ``.ino`` file.
+            sketch_file: The file to grade; by default ``sketch.ino``, else the only ``.ino`` file.
         """
         self.grade_dir = Path(grade_dir)
         self.sketch_file = sketch_file
@@ -94,8 +93,7 @@ class Submission:
         """The submitted sketch.
 
         Raises:
-            Ungradable: If there is no sketch to grade, or several, with a
-                message for the student.
+            Ungradable: If there is no sketch to grade, or several, with a message for the student.
         """
         if self.sketch_file:
             candidates = [self.student_dir / self.sketch_file]
@@ -108,8 +106,8 @@ class Submission:
             raise Ungradable(
                 f"Several sketches were submitted ({names}). Submit one .ino file and try again."
             )
-        # A symbolic link could point the grader, which runs as root, at a file
-        # the sketch itself may not read.
+        # A symlink could point the root-run grader at a file the sandbox user
+        # may not read.
         if len(candidates) != 1 or candidates[0].is_symlink() or not candidates[0].is_file():
             name = self.sketch_file or "an Arduino sketch (.ino file)"
             raise Ungradable(f"No submission was found. Submit {name} and try again.")
@@ -139,7 +137,6 @@ class Results:
     """
 
     def __init__(self) -> None:
-        """Start empty and gradable."""
         self.gradable = True
         self.stopped = False
         self.message = ""
@@ -176,8 +173,8 @@ class Results:
     def write(self, grade_dir: str | os.PathLike[str]) -> None:
         """Write ``results/results.json`` under the grading directory.
 
-        PrairieLearn cannot parse ``NaN`` or ``Infinity``, so a result holding
-        one is written as ungradable with the internal error message instead.
+        A result holding ``NaN`` or ``Infinity``, which PrairieLearn cannot parse, is
+        written as ungradable with the internal error message instead.
         """
         path = Path(grade_dir) / "results/results.json"
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -193,12 +190,11 @@ class Results:
 
 
 def protect(grade_dir: Path) -> None:
-    """Make a grading directory's contents readable by their owner only.
+    """Make a grading directory's contents readable by their owner, root, only.
 
-    The grader runs as root and the sandbox user cannot read what is hidden
-    this way, so a sketch cannot ``#include`` the tests or ``data.json``. The
-    directory itself and its ``results/`` keep their modes, so whoever
-    collects the results outside the container can still reach them.
+    The sandbox user then cannot read them, so a sketch cannot ``#include`` the
+    tests or ``data.json``; the directory itself and ``results/`` keep their modes,
+    so the results can still be collected outside the container.
     """
     for child in grade_dir.iterdir():
         if child.name == "results":

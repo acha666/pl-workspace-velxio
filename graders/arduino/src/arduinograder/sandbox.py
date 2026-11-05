@@ -1,8 +1,8 @@
 """Where, as whom and within what limits the toolchain and the simulator run.
 
-``Sandbox`` is the work directory and the account tools run as; ``Limits``
-are the per-process resource limits they start under; ``Budget`` is the
-wall-clock time left for all of them together.
+``Sandbox`` is the work directory and the account tools run as, ``Limits`` the
+per-process resource limits they start under, and ``Budget`` the wall-clock
+time left for all of them together.
 """
 
 from __future__ import annotations
@@ -29,17 +29,16 @@ SANDBOX_USER: Final = "sbuser"
 class Limits:
     """Per-process resource limits a tool starts under.
 
-    They are generous: a sketch that reaches them is far beyond anything a
-    question asks for. Their job is to stop one runaway tool before it takes
-    the whole grader down with it, and to make the cause show in the tool's
-    own output. Children inherit them, so they cover the compilers the
+    They are generous, far beyond what a question needs: their job is to stop one
+    runaway tool before it takes the grader down, with the cause showing in the
+    tool's own output. Children inherit them, so they cover the compilers the
     Arduino CLI starts.
 
     Attributes:
-        cpu_s: CPU seconds a process may use before it is stopped, or ``None``.
-            The hard limit, after which it is killed outright, is 10 s more.
-        memory_bytes: Address space a process may map, or ``None``. The
-            Arduino CLI's Go runtime needs about 1 GiB of it.
+        cpu_s: CPU seconds a process may use before it is stopped, or ``None``;
+            the hard limit, after which it is killed outright, is 10 s more.
+        memory_bytes: Address space a process may map, or ``None``; the Arduino
+            CLI's Go runtime needs about 1 GiB of it.
         file_bytes: The largest file a process may write, or ``None``.
     """
 
@@ -69,8 +68,8 @@ def _lower(which: int, soft: int, hard: int) -> None:
 COMPILER_LIMITS: Final = Limits(cpu_s=10, memory_bytes=1536 << 20, file_bytes=1 << 30)
 """Limits for the Arduino CLI and the compilers it runs.
 
-At 0.9 CPU, 10 CPU seconds leaves room in the default 25 s wall-clock budget
-for startup and reporting a runaway compiler as a failed submission.
+At 0.9 CPU, 10 CPU seconds leave room in the default 25 s wall-clock budget for
+startup and for reporting a runaway compiler as a failed submission.
 """
 SIMULATOR_LIMITS: Final = Limits(memory_bytes=1 << 30, file_bytes=256 << 20)
 """Limits for avrsim; the time budget bounds how long it runs."""
@@ -103,10 +102,10 @@ class Budget:
 class Sandbox:
     """A work directory and the user to run tools as.
 
-    With a user, the work directory belongs to that user and tools run as it,
-    so a sketch compiled there cannot read what the grader (running as root)
-    keeps under ``/grade``. Without one, everything runs as the current user,
-    for local use and tests.
+    With a user, the work directory belongs to that user and tools run as it, so a
+    sketch compiled there cannot read what the grader, running as root, keeps under
+    ``/grade``; without one, everything runs as the current user, for local use
+    and tests.
 
     Attributes:
         work_dir: The directory that sketches, builds and tool state go in.
@@ -124,11 +123,10 @@ class Sandbox:
         """Describe a sandbox without creating anything yet.
 
         Args:
-            work_dir: A missing or empty work directory; never cleared by ``prepare()``.
-            user: The account to run tools as. The grader must then run as root.
-            arduino_data: The Arduino CLI data directory; defaults to the
-                ``ARDUINO_DIRECTORIES_DATA`` environment variable or
-                ``/opt/arduino/data``.
+            work_dir: The work directory, which ``prepare()`` fills but never clears.
+            user: The account to run tools as, which needs the grader to run as root.
+            arduino_data: The Arduino CLI data directory; by default
+                ``ARDUINO_DIRECTORIES_DATA`` from the environment, or ``/opt/arduino/data``.
         """
         self.work_dir = Path(work_dir)
         self.user = user
@@ -142,13 +140,13 @@ class Sandbox:
         return cls(work_dir, user=SANDBOX_USER if os.geteuid() == 0 else None)
 
     def prepare(self) -> Sandbox:
-        """Create an empty work directory owned by the sandbox user.
+        """Create the work directory's layout, owned by the sandbox user.
 
         Returns:
             This sandbox, for chaining.
 
         Raises:
-            ValueError: If the work directory is a symlink or is not empty.
+            ValueError: If the work directory is a symlink, or exists and is not empty.
         """
         if self.work_dir.is_symlink() or (
             self.work_dir.exists() and (not self.work_dir.is_dir() or any(self.work_dir.iterdir()))
@@ -213,8 +211,8 @@ class Sandbox:
     ) -> subprocess.Popen[bytes]:
         """Start a tool as the sandbox user in its own process group.
 
-        With a user, the tool runs with that user's primary group only: no
-        supplementary group of the grader's root account carries over.
+        With a user, the tool gets that user's primary group only, so no supplementary
+        group of the grader's root account carries over.
 
         Args:
             args: The command line.

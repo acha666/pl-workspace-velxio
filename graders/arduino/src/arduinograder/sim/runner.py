@@ -43,7 +43,6 @@ class Simulator:
     """
 
     def __init__(self, sandbox: Sandbox, budget: Budget, *, program: str = "avrsim") -> None:
-        """Bind a simulator to a sandbox and a budget."""
         self.sandbox = sandbox
         self.budget = budget
         self.program = program
@@ -129,19 +128,18 @@ def _as_run_reason(text: str) -> RunReason:
 class Session:
     """A program running from reset, driven one step at a time.
 
-    Simulated time advances only in ``run_until()``, ``run_for()``,
-    ``pulse()`` and the ``wait_for`` methods; ``set()``, ``release()``,
-    ``analog()`` and ``send()`` apply at the current time. Once the program is
-    done, crashed or over a limit, ``running`` is ``False`` and time no longer
-    advances. Use it as a context manager, or call ``close()``.
+    Time advances only in ``run_until()``, ``run_for()``, ``pulse()`` and the
+    ``wait_for`` methods, while ``set()``, ``release()``, ``analog()`` and
+    ``send()`` apply at the current time; once the program is done, crashed or over
+    a limit, ``running`` is ``False`` and time stands still. Use it as a context
+    manager, or call ``close()``.
 
-    What the program does is recorded as it runs, and the ``wait_for``
-    methods hand out those records in order: each returns the first change
-    of its pin, or the first Serial line, not returned before, running the
-    program further only when there is none yet. An input, through ``set()``,
-    ``analog()``, ``send()`` or ``pulse()``, starts afresh: what the program
-    did before it is not a reaction to it, so the waits skip that. A
-    ``release()`` ends an input rather than starting one, so it does not.
+    The ``wait_for`` methods hand out what the program did in order: each returns
+    the first change of its pin, or the first Serial line, not returned before,
+    running the program on only when there is none yet. An input through
+    ``set()``, ``analog()``, ``send()`` or ``pulse()``, but not ``release()``,
+    starts the waits afresh, as what the program did before it is no reaction to
+    it.
 
     Attributes:
         max_pin_changes: The pin change limit in force.
@@ -164,9 +162,9 @@ class Session:
         self.max_serial_bytes = max_serial_bytes
         self._records: list[Record] = []
         self._latest: dict[int, PinState] = {pin: PinState.INPUT for pin in range(NUM_PINS)}
-        # Cursors into _records: where the records start that may be reactions
-        # to the latest input; per record kind and key, where those start that
-        # no wait has returned; and where the first unreturned Serial line starts.
+        # Cursors into _records: the first record since the latest input, per
+        # (kind, key) the first that no wait has returned, and the start of the
+        # first Serial line that no wait has returned.
         self._since = 0
         self._consumed: dict[tuple[RecordKind, int], int] = {}
         self._line_start = 0
@@ -275,10 +273,10 @@ class Session:
         return self.running
 
     def _mark(self) -> None:
-        """Start a new input: what the program did before it is not a reaction to it.
+        """Start a new input, so that later waits skip what the program did before it.
 
-        A Serial line in progress is kept whole, so the line cursor moves to
-        just after the last complete line.
+        A Serial line in progress is kept whole: the line cursor moves to just after
+        the last complete line.
         """
         self._since = len(self._records)
         for index in range(self._since - 1, self._line_start - 1, -1):
@@ -290,11 +288,11 @@ class Session:
     def _wait(
         self, kind: RecordKind, key: int, matches: Callable[[Record], bool], *, timeout_ms: float
     ) -> Record | None:
-        """Return the first unreturned record of a kind and key that matches.
+        """Return the first unreturned matching record of a kind and key.
 
-        Records from before the latest input, and the initial states at cycle
-        0, never match. When no recorded one matches, the program runs on
-        until one is produced or the timeout passes.
+        Records from before the latest input, and the initial states at cycle 0, never
+        match; when none is recorded yet, the program runs on until one is produced or
+        ``timeout_ms`` pass.
         """
         deadline = self._cycle + to_cycles(timeout_ms)
         while True:
@@ -326,19 +324,11 @@ class Session:
         return self._latest[pin_number(pin)]
 
     def run_until(self, ms: float) -> bool:
-        """Run until ``ms`` from reset.
-
-        Returns:
-            Whether the program is still running.
-        """
+        """Run until ``ms`` from reset and return whether the program still runs."""
         return self._run_to(to_cycles(ms))
 
     def run_for(self, ms: float) -> bool:
-        """Run for ``ms`` from now.
-
-        Returns:
-            Whether the program is still running.
-        """
+        """Run for ``ms`` from now and return whether the program still runs."""
         return self._run_to(self._cycle + to_cycles(ms))
 
     def set(self, pin: PinLike, level: LevelLike) -> None:
@@ -379,11 +369,10 @@ class Session:
             self._command("send " + data[start : start + SEND_CHUNK].hex())
 
     def pulse(self, pin: PinLike, level: LevelLike, *, duration_ms: float) -> bool:
-        """Drive a pin to ``level`` now and release it ``duration_ms`` later.
+        """Drive a pin to ``level``, run for ``duration_ms`` and release it.
 
-        A button press is a HIGH pulse, or a LOW one for a button to ground:
-        released, the pin reads the program's pull-up again, or stays LOW if
-        the program did not enable one. Time advances by ``duration_ms``.
+        A button press is a HIGH pulse, or a LOW one for a button to ground; released,
+        the pin reads the program's pull-up again, or stays LOW without one.
 
         Args:
             pin: The input pin.
@@ -394,8 +383,8 @@ class Session:
             Whether the program is still running.
 
         Raises:
-            ValueError: If the duration is negative or the pin or level is
-                invalid; the pin is not driven then.
+            ValueError: If the duration is negative or the pin or level is invalid;
+                the pin is not driven then.
         """
         if duration_ms < 0:
             raise ValueError(f"A pulse cannot last {duration_ms} ms.")
@@ -407,10 +396,9 @@ class Session:
     def wait_for(self, pin: PinLike, state: StateLike = None, *, timeout_ms: float) -> float | None:
         """Return when the program next changed a pin, running on until it does.
 
-        Changes are handed out in order: the first change of the pin (to
-        ``state``, if given) not returned before, since the latest input, is
-        returned at once, even though it happened before now. Only when there
-        is none does the program run on, for ``timeout_ms`` at most.
+        The first change of the pin (to ``state``, if given) not returned before, since
+        the latest input, is returned at once even if it happened before now; only when
+        there is none does the program run on, for ``timeout_ms`` at most.
 
         Args:
             pin: The pin to watch.
@@ -418,8 +406,7 @@ class Session:
             timeout_ms: How long to run for the change at most.
 
         Returns:
-            The time of the change in ms, or ``None`` on timeout or if the
-            program stopped first.
+            The time of the change in ms, or ``None`` on timeout or if the program stopped first.
         """
         wanted = _as_state(state)
         record = self._wait(
@@ -433,9 +420,9 @@ class Session:
     def wait_for_line(self, *, timeout_ms: float) -> Line | None:
         """Return the next Serial line the program completed, running on until it does.
 
-        Lines are handed out in order: the first line not returned before,
-        since the latest input, is returned at once; only when there is none
-        does the program run on, for ``timeout_ms`` at most.
+        The first line not returned before, since the latest input, is returned at
+        once; only when there is none does the program run on, for ``timeout_ms`` at
+        most.
 
         Returns:
             The line, or ``None`` on timeout or if the program stopped first.

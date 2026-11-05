@@ -33,8 +33,8 @@ class Inputs(Protocol):
 class Event(Protocol):
     """An input a scenario applies at a time.
 
-    Events are frozen dataclasses, so a scenario's events can be hashed into
-    its ``key``; a new kind of input is a new event class with ``apply()``.
+    Events are frozen dataclasses, so a scenario's events hash into its ``key``; a
+    new kind of input is a new event class with ``apply()``.
     """
 
     @property
@@ -139,9 +139,9 @@ class SendEvent:
 class Scenario:
     """Inputs applied at set times, from reset until ``duration_ms``.
 
-    Pins that are never set, or released, float LOW, or read HIGH under
-    ``INPUT_PULLUP``. Serial input arrives at one byte per millisecond. Every
-    method that adds an input returns the scenario, for chaining.
+    Pins never set, or released, read LOW, or HIGH under ``INPUT_PULLUP``; Serial
+    input arrives at one byte per millisecond; every method that adds an input
+    returns the scenario, for chaining.
 
     Attributes:
         duration_ms: How long to run from reset.
@@ -175,7 +175,7 @@ class Scenario:
         return to_cycles(at_ms), len(self._events)
 
     def set(self, pin: PinLike, level: LevelLike, *, at_ms: float = 0) -> Scenario:
-        """Drive a digital input from outside, overriding any internal pull-up.
+        """Drive a digital input from outside at ``at_ms``, overriding any internal pull-up.
 
         Args:
             pin: The input pin.
@@ -193,8 +193,8 @@ class Scenario:
     def release(self, pin: PinLike, *, at_ms: float = 0) -> Scenario:
         """Stop driving a digital input from outside at ``at_ms``.
 
-        The pin then reads HIGH under the program's ``INPUT_PULLUP`` and LOW
-        otherwise, as an unconnected pin does.
+        The pin then reads HIGH under the program's ``INPUT_PULLUP`` and LOW otherwise,
+        as an unconnected pin does.
 
         Raises:
             ValueError: If the pin is invalid or the time is after the end.
@@ -208,9 +208,8 @@ class Scenario:
     ) -> Scenario:
         """Drive a pin to ``level`` at ``at_ms`` and release it ``duration_ms`` later.
 
-        A button press is a HIGH pulse, or a LOW one for a button to ground:
-        released, the pin reads the program's pull-up again, or stays LOW if
-        the program did not enable one.
+        A button press is a HIGH pulse, or a LOW one for a button to ground; released,
+        the pin reads the program's pull-up again, or stays LOW without one.
 
         Args:
             pin: The input pin.
@@ -219,8 +218,8 @@ class Scenario:
             duration_ms: How long it lasts.
 
         Raises:
-            ValueError: If the pulse is negative or ends after the scenario, or
-                the pin or level is invalid; nothing is added then.
+            ValueError: If the pulse is negative or ends after the scenario, or the pin
+                or level is invalid; nothing is added then.
         """
         if duration_ms < 0:
             raise ValueError(f"A pulse cannot last {duration_ms} ms.")

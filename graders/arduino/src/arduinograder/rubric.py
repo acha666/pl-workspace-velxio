@@ -1,6 +1,6 @@
 """Test functions with points, each run on its own, and what they scored.
 
-A question's test module marks functions with the decorators here. Each test
+A question's test module marks functions with the decorators here; each test
 receives the fixtures it names as parameters and is scored by itself, so one
 failing or broken test never affects the others.
 """
@@ -21,6 +21,7 @@ from .sim import Scenario, SimulationStopped
 GRADER_ERROR_MESSAGE: Final = (
     "This test could not be run because of an error in the grader. Tell your instructor."
 )
+"""Shown for a test that raised an unexpected error."""
 ITEM_ATTR: Final = "_arduinograder_item"
 """The attribute the decorators keep an ``ItemSpec`` under on a test function."""
 GATE_ATTR: Final = "_arduinograder_gate"
@@ -78,9 +79,9 @@ def _spec(func: Callable[..., object]) -> ItemSpec:
 def points(value: float) -> Callable[[F], F]:
     """Make a function a test worth ``value`` points.
 
-    The test receives the fixtures it names as parameters. It passes unless it
-    raises ``AssertionError`` or its ``check`` records a failure; returning a
-    number from 0 to 1 awards that fraction of the points instead.
+    It receives the fixtures it names as parameters and passes unless it raises
+    ``AssertionError`` or its ``check`` records a failure; returning a number from
+    0 to 1 awards that fraction of the points instead.
     """
 
     def decorate(func: F) -> F:
@@ -121,10 +122,10 @@ def with_scenario(scenario: Scenario) -> Callable[[F], F]:
 
 
 def gate(func: F) -> F:
-    """Make a function a gate: it runs before the tests and may stop grading.
+    """Make a function a gate, run before the tests to reject a submission.
 
-    A gate takes fixtures like a test. Raising ``StopGrading``, or returning a
-    message, ends grading with zero points and that message.
+    It takes fixtures like a test and stops grading with zero points by raising
+    ``StopGrading``, returning a message or failing an ``assert``.
     """
     setattr(func, GATE_ATTR, True)
     return func
@@ -139,7 +140,6 @@ class Check:
     """
 
     def __init__(self) -> None:
-        """Start with no checks made."""
         self.failures: list[str] = []
         self.total = 0
 
@@ -278,9 +278,8 @@ def run_gate(func: TestFunction, resolve: Resolver) -> None:
     """Run a gate.
 
     Raises:
-        StopGrading: If the gate raised it or returned a message, or if it
-            failed an ``assert`` or asked about a time after the simulation
-            stopped, as a test would fail.
+        StopGrading: If the gate raised it, returned a message, failed an ``assert``
+            or asked about a time after the simulation stopped.
     """
     try:
         message = call_with_fixtures(func, resolve)
@@ -293,19 +292,15 @@ def run_gate(func: TestFunction, resolve: Resolver) -> None:
 
 
 def run_item(item: Item, resolve: Resolver) -> ItemResult:
-    """Run one test on its own.
+    """Run one test on its own and return its result.
 
-    ``StopGrading``, ``Ungradable`` and ``ConfigurationError`` propagate; any
-    other exception fails only this test. A failing assert's message, a
-    ``SimulationStopped`` explanation and every failed check are reported to
-    the student.
+    ``StopGrading``, ``Ungradable`` and ``ConfigurationError`` propagate; any other
+    exception fails only this test. A failed assert's message, a
+    ``SimulationStopped`` explanation and every failed check go to the student.
 
     Args:
         item: The test to run.
-        resolve: Supplies the fixtures it names; ``check`` is supplied here.
-
-    Returns:
-        The test's result.
+        resolve: Supplies the fixtures it names, except ``check``, made here.
     """
     check = Check()
 
@@ -326,8 +321,8 @@ def run_item(item: Item, resolve: Resolver) -> ItemResult:
     except Exception:
         traceback.print_exc()
         return ItemResult(item.name, 0, item.points, item.description, GRADER_ERROR_MESSAGE)
-    # Not rounded: rounding the points but not max_points puts a full-marks
-    # score off 1.0, which PrairieLearn rejects or shows as 99%.
+    # Unrounded: rounded points over unrounded max_points could put full
+    # marks at 1.0003, which PrairieLearn rejects, or at 0.9999.
     return ItemResult(
         item.name,
         item.points * fraction,

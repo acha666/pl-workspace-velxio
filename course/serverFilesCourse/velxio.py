@@ -49,7 +49,8 @@ def extract_sketch(encoded_project):
 
 
 def parse(data):
-    # PrairieLearn collects gradedFiles before parse(). Never read the live workspace.
+    """Replace the submitted files with the project snapshot and the sketch extracted from it."""
+    # PrairieLearn collects gradedFiles before parse(); never read the live workspace.
     submitted_files = data["submitted_answers"].get("_files", [])
     if not isinstance(submitted_files, list) or any(
         not isinstance(file, dict) for file in submitted_files
@@ -57,11 +58,9 @@ def parse(data):
         data["format_errors"].setdefault("_files", []).append("Invalid submitted files.")
         return
 
-    # Only PrairieLearn adds _files, from the workspace's graded files, after it
-    # has copied the request into raw_submitted_answers. A client sending its own
-    # could get another sketch graded than the one in its project: an alias such
-    # as "./sketch.ino" overwrites the extracted sketch in the grader's directory,
-    # and a project of its own is kept when the workspace has never been opened.
+    # PrairieLearn adds _files from the workspace's graded files after copying
+    # the request into raw_submitted_answers, so _files there came from the
+    # client and could get another sketch graded than the one in its project.
     if "_files" in data.get("raw_submitted_answers", {}):
         data["submitted_answers"]["_files"] = []
         data["format_errors"].setdefault("_files", []).append("Invalid submitted files.")

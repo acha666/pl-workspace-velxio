@@ -1,9 +1,9 @@
 """Grading one submission with a test module: the fixtures, and the run.
 
-A test or gate names the fixtures it needs as parameters. ``Grading``
-supplies them, compiling the sketch once and simulating each distinct
-scenario once, and runs the module's gates and then its tests. ``grade()``
-does that for the submission PrairieLearn lays out and writes the results.
+A test or gate names the fixtures it needs as parameters; ``Grading`` supplies
+them, compiling the sketch once and simulating each distinct scenario once, and
+runs the module's gates and then its tests. ``grade()`` does that for the
+submission PrairieLearn lays out and writes the results.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from .sim import Scenario, ScenarioKey, Session, Simulator, Trace
 from .toolchain import Compiler, Firmware
 
 WORK_DIR: Final = Path("/tmp/arduinograder")
-"""Where sketches are compiled and simulated, unless ``grade()`` is told otherwise."""
+"""Where sketches are compiled and simulated unless ``grade()`` is told otherwise."""
 DEFAULT_TIME_BUDGET_S: Final = 25
 """The wall-clock budget for compiling and simulating, unless the module sets ``TIME_BUDGET_S``.
 
@@ -63,11 +63,10 @@ def _parameters(func: Callable[..., object]) -> frozenset[str]:
 class Grading:
     """One run of a test module's gates and tests on one submission.
 
-    Every fixture in ``FIXTURE_NAMES`` is an attribute of the same name,
-    created on first use and kept for the rest of the run, so the sketch is
-    compiled at most once. ``resolve()`` looks fixtures up by name for
-    ``rubric.run_gate()`` and ``rubric.run_item()``, adding ``trace``, which
-    depends on the test's scenario.
+    Every fixture in ``FIXTURE_NAMES`` is an attribute of the same name, created on
+    first use and kept for the run, so the sketch is compiled at most once;
+    ``resolve()`` looks them up by name for ``rubric.run_gate()`` and
+    ``rubric.run_item()`` and adds ``trace``, which depends on the test's scenario.
 
     Attributes:
         module: The question's test module.
@@ -154,8 +153,7 @@ class Grading:
 
         Args:
             name: The parameter name.
-            item: The test being run, whose own scenario ``trace`` uses; ``None``
-                for a gate.
+            item: The test being run, whose own scenario ``trace`` uses; ``None`` for a gate.
 
         Raises:
             ConfigurationError: If there is no such fixture.
@@ -196,8 +194,8 @@ class Grading:
             for func in gates:
                 run_gate(func, self.resolve)
             if any(FIRMWARE_FIXTURES & _parameters(item.func) for item in items):
-                # Compile before the tests: a compile error then stops grading
-                # before any test is recorded, as a gate does.
+                # Compile first, so a compile error stops grading before any
+                # test is recorded, as a gate does.
                 self.resolve("firmware")
             for item in items:
                 self.results.add(run_item(item, self.resolve))
@@ -215,11 +213,10 @@ class Grading:
 
 
 def load_module(path: str | os.PathLike[str]) -> ModuleType:
-    """Import a test module from its file path.
+    """Import a test module from its file path, as running the file directly would.
 
-    As when the file is run directly, the module is registered in
-    ``sys.modules`` and its directory is put on ``sys.path``, so dataclasses
-    in it and helper modules next to it work.
+    The module is registered in ``sys.modules`` and its directory put on
+    ``sys.path``, so dataclasses in it and helper modules next to it work.
 
     Raises:
         ImportError: If the file cannot be loaded as a module.
@@ -261,27 +258,23 @@ def grade(
     work_dir: str | os.PathLike[str] = WORK_DIR,
     sandbox: Sandbox | None = None,
 ) -> Results:
-    """Grade the submission under ``grade_dir`` with a test module.
+    """Grade the submission under ``grade_dir`` with a test module and write the results.
 
-    The module may set ``TIME_BUDGET_S`` (default 25) and ``SKETCH_FILE``
-    (default: ``sketch.ino``, else the only ``.ino`` submitted). Whatever
-    happens, ``results/results.json`` is written.
-
-    Grading PrairieLearn's ``/grade`` is refused, as an internal error, unless
-    the grader runs as root and can hand compiling and simulating to the
-    sandbox user: an image started as another user would let a sketch read
-    the tests.
+    The module may set ``TIME_BUDGET_S`` (default 25) and ``SKETCH_FILE`` (default
+    ``sketch.ino``, else the only ``.ino`` submitted). Grading PrairieLearn's
+    ``/grade`` needs root, so that compiling and simulating can run as the sandbox
+    user without reading the tests; otherwise it fails as an internal error.
 
     Args:
         module: A loaded test module, or the path of one.
         grade_dir: PrairieLearn's grading directory.
-        work_dir: Where sketches are compiled and simulated; must be missing or
-            empty, and not a symlink. Existing contents are never deleted.
-        sandbox: The sandbox to use; by default one in ``work_dir`` that runs
-            as the sandbox user when root.
+        work_dir: Where sketches are compiled and simulated: a missing or empty
+            directory, never cleared.
+        sandbox: The sandbox to use; by default one in ``work_dir`` that runs as the
+            sandbox user when root.
 
     Returns:
-        The results, also written to ``results.json``.
+        The results, as written to ``results/results.json``.
     """
     grade_dir = Path(grade_dir)
     results = Results()

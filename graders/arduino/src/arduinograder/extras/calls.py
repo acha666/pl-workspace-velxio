@@ -29,18 +29,15 @@ _PARSER: Final = Parser(Language(tree_sitter_cpp.language()))
 
 
 def find_calls(source: str, *names: str) -> list[Call]:
-    """Return calls to the named functions, ignoring comments and string literals.
+    """Return the calls to the named functions, in line order.
 
-    Matches plain and ``::``-qualified calls such as ``delay(10)`` and
-    ``::delay(10)``. Calls hidden behind macros or function pointers are not
-    detected.
+    Plain and ``::``-qualified calls such as ``delay(10)`` and ``::delay(10)`` count,
+    those in comments and strings do not, and calls hidden behind macros or
+    function pointers are not found.
 
     Args:
         source: The sketch's text.
-        *names: The function names to look for, as in ``no_calls()``.
-
-    Returns:
-        The calls in line order.
+        *names: The function names to look for.
     """
     wanted = set(names)
     lines = source.split("\n")  # tree-sitter rows split on "\n" only
@@ -63,7 +60,7 @@ def find_calls(source: str, *names: str) -> list[Call]:
 
 
 def forbid_calls(source: str, *names: str) -> None:
-    """Stop grading with a score of zero if the source calls any of these functions.
+    """Stop grading with score 0 if the source calls any of the named functions.
 
     Raises:
         StopGrading: Listing up to three of the calls.
@@ -80,7 +77,7 @@ def forbid_calls(source: str, *names: str) -> None:
 def no_calls(*names: str) -> Callable[[str], None]:
     """Return a gate that stops grading with score 0 if the sketch calls these functions.
 
-    Use it in a test module as ``gates = [no_calls("delay", "delayMicroseconds")]``.
+    Use it as ``gates = [no_calls("delay", "delayMicroseconds")]`` in a test module.
     """
 
     def check_source(source: str) -> None:
