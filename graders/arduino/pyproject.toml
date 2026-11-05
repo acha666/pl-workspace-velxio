@@ -1,6 +1,6 @@
 [project]
 name = "arduinograder"
-version = "3.0.0.dev0"
+version = "3.0.0"
 description = "Grade Arduino Uno sketches for PrairieLearn by compiling them and simulating their inputs."
 readme = "README.md"
 requires-python = ">=3.12"

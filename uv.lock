@@ -16,7 +16,7 @@ dev = [{ name = "pytest", specifier = ">=9.2.0" }]
 
 [[package]]
 name = "arduinograder"
-version = "3.0.0.dev0"
+version = "3.0.0"
 source = { editable = "graders/arduino" }
 dependencies = [
     { name = "tree-sitter" },

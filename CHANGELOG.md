@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.0.0 — 2026-11-05
 
 The grader's test API is redesigned, and the repository is laid out for several graders and workspace images. The workspace image only moved its sources.
 

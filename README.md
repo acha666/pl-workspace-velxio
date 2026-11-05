@@ -52,6 +52,6 @@ The Python code is developed with [uv](https://docs.astral.sh/uv/): `uv sync --a
 
 ## Docker Hub releases
 
-Stable Git tags such as `v2.0.0` run all container tests before publishing `arduino-workspace-2.0.0`, `arduino-workspace-2.0`, `arduino-workspace-2` and `arduino-workspace`, and the matching `arduino-grader-` tags, to Docker Hub; release 1.0.0 was published only as `arduino-1.0.0` and its `arduino-` aliases. Before tagging, update the [changelog](CHANGELOG.md) and the template image versions, run the checks above, then commit and push the release commit and tag, and confirm the tag workflow succeeded and the versioned images are available before using them in a course.
+Stable Git tags such as `v3.0.0` run all container tests before publishing `arduino-workspace-3.0.0`, `arduino-workspace-3.0`, `arduino-workspace-3` and `arduino-workspace`, and the matching `arduino-grader-` tags, to Docker Hub; release 1.0.0 was published only as `arduino-1.0.0` and its `arduino-` aliases. Before tagging, update the [changelog](CHANGELOG.md) and the template image versions, run the checks above, then commit and push the release commit and tag, and confirm the tag workflow succeeded and the versioned images are available before using them in a course.
 
 When upgrading, update the pins at the top of the Dockerfile and `workspaces/arduino/dependencies/` together, review patch conflicts and rerun all tests. [Source and license](SOURCE.md).
