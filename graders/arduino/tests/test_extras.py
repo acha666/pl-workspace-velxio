@@ -58,14 +58,12 @@ def test_find_calls_ignores_comments_strings_and_other_names() -> None:
         ("delay", 5, "::delay(2);"),
     ]
     assert [call.line for call in find_calls(source, "delayMicroseconds")] == [6]
+    # Line numbers count "\n" only, as tree-sitter does, whatever else the file holds.
+    odd = "int a; /* \x0c form feed */\r\nvoid loop() {\r\n  delay(1);\r\n}\r\n"
+    assert [call.line for call in find_calls(odd, "delay")] == [3]
 
 
-def test_find_calls_line_numbers_survive_unusual_line_breaks() -> None:
-    source = "int a; /* \x0c form feed */\r\nvoid loop() {\r\n  delay(1);\r\n}\r\n"
-    assert [call.line for call in find_calls(source, "delay")] == [3]
-
-
-def test_forbid_calls_stops_grading_and_lists_the_calls() -> None:
+def test_forbidden_calls_stop_grading_with_the_calls_listed() -> None:
     source = "void loop() {\n  delay(5);\n  delayMicroseconds(1);\n}\n"
     with pytest.raises(StopGrading) as stopped:
         forbid_calls(source, "delay", "delayMicroseconds")
@@ -74,13 +72,10 @@ def test_forbid_calls_stops_grading_and_lists_the_calls() -> None:
         "not allow:\n    line 2: delay(5);\n    line 3: delayMicroseconds(1);"
     )
     forbid_calls(source, "tone")
-
-
-def test_no_calls_is_a_gate_on_the_source() -> None:
     gate = no_calls("delay")
     assert gate("void loop() {}") is None
     with pytest.raises(StopGrading, match="calls delay\\(\\)"):
-        gate("void loop() { delay(1); }")
+        gate(source)
 
 
 def test_seven_segment_gives_lit_segments_from_the_trace(simulate: SimulateFn) -> None:

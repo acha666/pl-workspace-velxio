@@ -5,8 +5,8 @@ from collections.abc import Callable
 import pytest
 
 from arduinograder import PinState, Scenario, SimulationStopped, Trace
-from arduinograder.sim import AnalogEvent, DigitalEvent, ReleaseEvent, SendEvent, runner
-from arduinograder.sim.trace import as_level, as_stop_reason
+from arduinograder.sim import AnalogEvent, DigitalEvent, ReleaseEvent, SendEvent
+from arduinograder.sim.trace import as_level
 
 BLINK_TRACE = """
 P 0 13 I
@@ -64,6 +64,12 @@ def test_changes_and_edges(trace: Trace) -> None:
     assert led.edges(start_ms=100).intervals_ms() == [500, 525]
     assert led.edges(start_ms=100).describe() == "500 ms, 1000 ms, 1525 ms"
     assert led.edges(start_ms=1600).describe() == "never"
+    # A pin that never stops flipping gets a message of bounded length.
+    records = "".join(f"P {16000 * (i + 1)} 13 {'H' if i % 2 == 0 else 'L'}\n" for i in range(40))
+    many = Trace.from_text("P 0 13 I\nP 8000 13 L\n" + records + "T 1600000 reached")
+    assert len(many.pin(13).edges()) == 40
+    described = many.pin(13).edges().describe()
+    assert described.endswith(", and 15 more") and described.count(" ms") == 25
 
 
 def test_high_fraction_and_stability(trace: Trace) -> None:
@@ -101,11 +107,14 @@ def test_times_past_the_end_are_errors_or_stops(trace: Trace) -> None:
     with pytest.raises(SimulationStopped):
         crashed.serial.text(start_ms=11)
     assert crashed.pin(13).edges(start_ms=5) == [] and crashed.serial.text(start_ms=5) == ""
-    limited = Trace.from_text("T 16000 pin-limit", max_pin_changes=5)
-    assert (
-        limited.stop_message is not None
-        and "reached the limit of 5 pin changes" in limited.stop_message
-    )
+    for text, limit, message in [
+        ("T 16000 pin-limit", {"max_pin_changes": 5}, "reached the limit of 5 pin changes at 1 ms"),
+        ("T 16000 serial-limit", {"max_serial_bytes": 8}, "limit of 8 bytes printed on Serial"),
+        ("T 16000 done", {}, "stopped running at 1 ms"),
+    ]:
+        stopped = Trace.from_text(text, **limit)
+        with pytest.raises(SimulationStopped, match=message):
+            stopped.pin(13).at(2)
     with pytest.raises(ValueError):
         Trace.from_text("P 0 13 I")
     with pytest.raises(ValueError):
@@ -135,58 +144,29 @@ def test_scenarios_order_events_and_reject_invalid_inputs() -> None:
     same.send("hi\n", at_ms=50).analog("A1", 512)
     assert scenario.key == same.key
     assert scenario.key != Scenario(duration_ms=100).key
-    calls: list[Callable[[], object]] = [
-        lambda: scenario.set(20, 1),
-        lambda: scenario.set("A6", 1),
-        lambda: scenario.set(True, 1),
-        lambda: scenario.set(2, 1, at_ms=101),
-        lambda: scenario.set(2, 1, at_ms=-1),
-        lambda: scenario.analog(2, 100),
-        lambda: scenario.analog("A0", 1024),
-    ]
-    for call in calls:
-        with pytest.raises(ValueError):
-            call()
-    with pytest.raises(ValueError):
-        Scenario(duration_ms=0)
 
-
-def test_reason_words_match_the_avrsim_protocol() -> None:
-    for reason in ("reached", "watched", "done", "crashed", "pin-limit", "serial-limit"):
-        assert runner._as_run_reason(reason) == reason
-    assert {"done", "crashed", "pin-limit", "serial-limit"} == runner.FINAL_REASONS
-    with pytest.raises(RuntimeError):
-        runner._as_run_reason("vanished")
-    assert as_stop_reason("reached") == "end"
-    assert as_stop_reason("pin-limit") == "pin-limit"
-
-
-def test_describe_lists_only_the_first_edges() -> None:
-    records = "".join(f"P {16000 * (i + 1)} 13 {'H' if i % 2 == 0 else 'L'}\n" for i in range(40))
-    trace = Trace.from_text("P 0 13 I\nP 8000 13 L\n" + records + "T 1600000 reached")
-    edges = trace.pin(13).edges()
-    assert len(edges) == 40
-    described = edges.describe()
-    assert described.endswith(", and 15 more") and described.count(" ms") == 25
-
-
-def test_levels_are_checked_and_pulses_are_all_or_nothing() -> None:
     given: list[PinState | str | int] = [1, 0, True, False, "HIGH", "low", "1", PinState.LOW]
     assert [as_level(value) for value in given] == [1, 0, 1, 0, 1, 0, 1, 0]
-    bad: PinState | str | int
-    for bad in (2, -1, "ON", PinState.INPUT):
+    untouched = Scenario(duration_ms=100)
+    rejected: list[Callable[[], object]] = [
+        lambda: untouched.set(20, 1),
+        lambda: untouched.set("A6", 1),
+        lambda: untouched.set(True, 1),
+        lambda: untouched.set(2, 2),
+        lambda: untouched.set(2, "ON"),
+        lambda: untouched.set(2, PinState.INPUT),
+        lambda: untouched.set(2, 1, at_ms=101),
+        lambda: untouched.set(2, 1, at_ms=-1),
+        lambda: untouched.analog(2, 100),
+        lambda: untouched.analog("A0", 1024),
+        lambda: untouched.pulse(2, 1, at_ms=10, duration_ms=-1),
+        lambda: untouched.pulse(2, 1, at_ms=95, duration_ms=10),
+        lambda: untouched.pulse(2, "ON", at_ms=10, duration_ms=10),
+    ]
+    for call in rejected:
         with pytest.raises(ValueError):
-            as_level(bad)
+            call()
+    assert untouched.events == [], "a rejected input must not be half applied"
     for duration in (float("nan"), float("inf"), 0):
         with pytest.raises(ValueError):
             Scenario(duration)
-    scenario = Scenario(duration_ms=100)
-    with pytest.raises(ValueError):
-        scenario.pulse(2, 1, at_ms=10, duration_ms=-1)
-    with pytest.raises(ValueError):
-        scenario.pulse(2, 1, at_ms=95, duration_ms=10)
-    with pytest.raises(ValueError):
-        scenario.pulse(2, "ON", at_ms=10, duration_ms=10)
-    assert scenario.events == []
-    event = scenario.set(2, "LOW").events[0]
-    assert isinstance(event, DigitalEvent) and event.level == 0

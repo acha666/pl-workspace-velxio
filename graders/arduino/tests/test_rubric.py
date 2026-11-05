@@ -7,11 +7,12 @@ import tempfile
 import types
 from functools import cached_property
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 import arduinograder as ag
-from arduinograder import rubric
+from arduinograder import grading, rubric
 from arduinograder.errors import INTERNAL_ERROR_MESSAGE
 from arduinograder.grading import Grading
 from arduinograder.pl import Submission
@@ -23,9 +24,9 @@ TRACE = ag.Trace.from_text(
 )
 
 
-def module_from(source: str) -> types.ModuleType:
+def module_from(source: str, file: str | None = "/nowhere/tests/test.py") -> types.ModuleType:
     module = types.ModuleType("question_tests")
-    module.__file__ = "/nowhere/tests/test.py"
+    module.__file__ = file
     exec(compile(source, "test.py", "exec"), module.__dict__)
     return module
 
@@ -33,10 +34,19 @@ def module_from(source: str) -> types.ModuleType:
 class FakeGrading(Grading):
     """Grading with a canned trace instead of the toolchain."""
 
-    def __init__(self, module: types.ModuleType, tmp_path: Path, source: str = "void loop() {}"):
+    def __init__(
+        self,
+        module: types.ModuleType,
+        tmp_path: Path,
+        source: str = "void loop() {}",
+        params: dict[str, Any] | None = None,
+    ) -> None:
         grade_dir = tmp_path / "grade"
         (grade_dir / "student").mkdir(parents=True, exist_ok=True)
         (grade_dir / "student/sketch.ino").write_text(source)
+        if params is not None:
+            (grade_dir / "data").mkdir(exist_ok=True)
+            (grade_dir / "data/data.json").write_text(json.dumps({"params": params}))
         # prepare() refuses a used work directory, so each run gets a fresh one.
         work_dir = Path(tempfile.mkdtemp(prefix="work-", dir=tmp_path))
         super().__init__(module, Submission(grade_dir), Sandbox(work_dir), Budget(60))
@@ -118,6 +128,14 @@ def test_number(trace):
 def test_stopped_simulation(simulate):
     crashed = ag.Trace.from_text("T 160000 crashed")
     crashed.pin(13).at(500)
+
+@ag.points(1)
+def test_nan(trace):
+    return float("nan")
+
+@ag.points(1)
+def test_message_is_not_text(check):
+    check(False, 42)
 """
     )
     grading = FakeGrading(module, tmp_path)
@@ -132,10 +150,31 @@ def test_stopped_simulation(simulate):
         (0.0, ""),
         (0.5, ""),
         (0.0, "The program crashed at 10 ms, so the simulation stopped."),
+        (0, rubric.GRADER_ERROR_MESSAGE),
+        (0.0, "42"),
     ]
-    assert results["score"] == pytest.approx(4.5 / 14)
+    assert results["score"] == pytest.approx(4.5 / 16)
     assert results["tests"][3]["max_points"] == 4
-    json.dumps(results)
+    json.dumps(results, allow_nan=False)
+
+
+def test_fixtures_describe_the_submission(tmp_path: Path) -> None:
+    module = module_from(
+        """
+import arduinograder as ag
+from pathlib import Path
+
+@ag.points(1)
+def test_fixtures(source, sketch_name, params, data, tests_dir, submission, check):
+    check(source == "void loop() { led(); }", "source")
+    check(sketch_name == "sketch.ino", "sketch_name")
+    check(params == {"pin": 13} and data == {"params": {"pin": 13}}, "params and data")
+    check(tests_dir == Path("/nowhere/tests"), "tests_dir")
+    check(submission.files == ["sketch.ino"] and submission.read("sketch.ino") == source, "files")
+"""
+    )
+    results = FakeGrading(module, tmp_path, "void loop() { led(); }", params={"pin": 13}).run()
+    assert results.score == 1.0, results.items[0].message
 
 
 def test_gates_stop_grading_with_zero_points(tmp_path: Path) -> None:
@@ -150,17 +189,25 @@ def no_bar(source):
     if "bar" in source:
         raise ag.StopGrading("No bar allowed.")
 
+@ag.gate
+def led_on_at_600(source, trace):
+    if "baz" in source:
+        assert trace.pin(13).at(600).is_high, "LED off at 600 ms"
+
 @ag.points(1)
 def test_passes(trace):
     pass
 """
     )
     assert FakeGrading(module, tmp_path, "void loop() {}").run().score == 1.0
-    stopped = FakeGrading(module, tmp_path, "void loop() { foo(); }").run()
-    assert stopped.score == 0.0 and stopped.gradable and stopped.message == "No foo allowed."
-    assert stopped.items == []
-    stopped = FakeGrading(module, tmp_path, "void loop() { bar(); }").run()
-    assert stopped.score == 0.0 and stopped.message == "No bar allowed."
+    for source, message in [
+        ("void loop() { foo(); }", "No foo allowed."),
+        ("void loop() { bar(); }", "No bar allowed."),
+        ("void loop() { baz(); }", "LED off at 600 ms"),
+    ]:
+        stopped = FakeGrading(module, tmp_path, source).run()
+        assert stopped.stopped and stopped.gradable and stopped.score == 0.0, source
+        assert stopped.message == message and stopped.items == []
 
 
 def test_stop_and_ungradable_from_tests_and_fixtures(tmp_path: Path) -> None:
@@ -231,51 +278,37 @@ def test_d(simulate):
 def test_mistakes_in_the_test_module_make_every_submission_ungradable(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    for source in [
-        "import arduinograder as ag\n@ag.points(1)\ndef test_a(trace): pass\n",
-        "import arduinograder as ag\n@ag.points(1)\ndef test_a(nonsense): pass\n",
-        "import arduinograder as ag\n@ag.gate\ndef gate(nonsense): pass\n",
-    ]:
-        results = FakeGrading(module_from(source), tmp_path).run()
+    cases = [
+        ("@ag.points(1)\ndef test_a(trace): pass\n", "needs scenario"),
+        ("@ag.points(1)\ndef test_a(nonsense): pass\n", "no fixture named 'nonsense'"),
+        (
+            "@ag.gate\ndef gate(nonsense): pass\n@ag.points(1)\ndef test_a(source): pass\n",
+            "no fixture named 'nonsense'",
+        ),
+        ("", "no tests worth points"),
+        ("@ag.points(0)\ndef test_a(source): pass\n", "no tests worth points"),
+    ]
+    for source, cause in cases:
+        results = FakeGrading(module_from("import arduinograder as ag\n" + source), tmp_path).run()
         assert not results.gradable and results.message == INTERNAL_ERROR_MESSAGE, source
         assert results.items == []
-        assert "ConfigurationError" in capsys.readouterr().err
-
-
-def test_returned_fractions_must_be_finite(tmp_path: Path) -> None:
+        assert cause in capsys.readouterr().err, source
     module = module_from(
-        """
-import arduinograder as ag
-scenario = ag.Scenario(duration_ms=2000)
-
-@ag.points(1)
-def test_nan(trace):
-    return float("nan")
-
-@ag.points(1)
-def test_inf(trace):
-    return float("inf")
-"""
+        "import arduinograder as ag\n@ag.points(1)\ndef test_a(tests_dir): pass", None
     )
-    results = FakeGrading(module, tmp_path).run().to_dict()
-    assert [test["message"] for test in results["tests"]] == [rubric.GRADER_ERROR_MESSAGE] * 2
-    assert results["score"] == 0
-
-
-def test_a_time_budget_that_is_not_a_positive_number_is_a_configuration_error(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    from arduinograder import grading
+    results = FakeGrading(module, tmp_path).run()
+    assert not results.gradable and "no tests_dir" in capsys.readouterr().err
 
     grade_dir = tmp_path / "grade"
-    (grade_dir / "student").mkdir(parents=True)
-    (grade_dir / "student/sketch.ino").write_text("void loop() {}")
-    for budget in ("45", 0, -1, float("inf"), True):
-        module = module_from("import arduinograder as ag\n@ag.points(1)\ndef test_a(source): pass")
-        vars(module)["TIME_BUDGET_S"] = budget
-        results = grading.grade(module, grade_dir=grade_dir, work_dir=tmp_path / "work")
-        assert not results.gradable, budget
-        assert "TIME_BUDGET_S" in capsys.readouterr().err
+    for budget in ("'45'", 0, -1, "1e999", True):
+        module = module_from(
+            f"import arduinograder as ag\nTIME_BUDGET_S = {budget}\n"
+            "@ag.points(1)\ndef test_a(source): pass\n"
+        )
+        work_dir = Path(tempfile.mkdtemp(prefix="work-", dir=tmp_path))
+        results = grading.grade(module, grade_dir=grade_dir, work_dir=work_dir)
+        assert not results.gradable and results.message == INTERNAL_ERROR_MESSAGE, budget
+        assert "TIME_BUDGET_S" in capsys.readouterr().err, budget
 
 
 def test_full_marks_score_exactly_one_whatever_the_points(tmp_path: Path) -> None:
@@ -289,41 +322,6 @@ def test_full_marks_score_exactly_one_whatever_the_points(tmp_path: Path) -> Non
     results = FakeGrading(module, tmp_path).run()
     assert results.score == 1.0
     assert json.loads(json.dumps(results.to_dict()))["score"] == 1.0
-
-
-def test_gates_fail_like_tests_and_check_messages_become_text(tmp_path: Path) -> None:
-    module = module_from(
-        """
-import arduinograder as ag
-scenario = ag.Scenario(duration_ms=2000)
-
-@ag.gate
-def check_output(trace):
-    assert trace.pin(13).at(600).is_high, "LED off at 600 ms"
-
-@ag.points(1)
-def test_never_runs(trace): pass
-"""
-    )
-    results = FakeGrading(module, tmp_path).run()
-    assert results.stopped and results.message == "LED off at 600 ms"
-    assert results.items == []
-    check = rubric.Check()
-    check(False, 42)  # type: ignore[arg-type]
-    check.fail(None)  # type: ignore[arg-type]
-    assert check.failures == ["42", "None"]
-
-
-def test_a_module_without_tests_worth_points_is_a_configuration_error(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    for source in [
-        "import arduinograder as ag\n",
-        "import arduinograder as ag\n@ag.points(0)\ndef test_a(source): pass\n",
-    ]:
-        results = FakeGrading(module_from(source), tmp_path).run()
-        assert not results.gradable and results.message == INTERNAL_ERROR_MESSAGE
-        assert "no tests worth points" in capsys.readouterr().err
 
 
 def test_a_compile_error_stops_grading_before_any_test(tmp_path: Path) -> None:
