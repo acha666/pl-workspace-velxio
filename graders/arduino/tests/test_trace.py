@@ -102,7 +102,10 @@ def test_times_past_the_end_are_errors_or_stops(trace: Trace) -> None:
         crashed.serial.text(start_ms=11)
     assert crashed.pin(13).edges(start_ms=5) == [] and crashed.serial.text(start_ms=5) == ""
     limited = Trace.from_text("T 16000 pin-limit", max_pin_changes=5)
-    assert limited.stop_message is not None and "5 times, the limit" in limited.stop_message
+    assert (
+        limited.stop_message is not None
+        and "reached the limit of 5 pin changes" in limited.stop_message
+    )
     with pytest.raises(ValueError):
         Trace.from_text("P 0 13 I")
     with pytest.raises(ValueError):

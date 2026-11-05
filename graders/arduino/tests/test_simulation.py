@@ -165,7 +165,7 @@ def test_limits_stop_the_simulation_and_explain_why(
     toggles = "void setup() { pinMode(13, OUTPUT); } void loop() { PINB = _BV(5); }"
     trace = simulate(toggles, Scenario(duration_ms=1000, max_pin_changes=1000))
     assert trace.stop_reason == "pin-limit" and trace.end_ms < 10
-    with pytest.raises(SimulationStopped, match="changed its pins 1000 times"):
+    with pytest.raises(SimulationStopped, match="reached the limit of 1000 pin changes"):
         trace.pin(13).level(500)
     with session(toggles, max_pin_changes=1000) as run:
         assert run.run_until(1000) is False
