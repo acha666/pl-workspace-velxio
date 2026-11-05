@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 import types
 from functools import cached_property
 from pathlib import Path
@@ -36,7 +37,9 @@ class FakeGrading(Grading):
         grade_dir = tmp_path / "grade"
         (grade_dir / "student").mkdir(parents=True, exist_ok=True)
         (grade_dir / "student/sketch.ino").write_text(source)
-        super().__init__(module, Submission(grade_dir), Sandbox(tmp_path / "work"), Budget(60))
+        # prepare() refuses a used work directory, so each run gets a fresh one.
+        work_dir = Path(tempfile.mkdtemp(prefix="work-", dir=tmp_path))
+        super().__init__(module, Submission(grade_dir), Sandbox(work_dir), Budget(60))
         self.scenarios: list[ag.Scenario] = []
 
     @cached_property
