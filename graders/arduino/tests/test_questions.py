@@ -150,8 +150,10 @@ def test_command_line_grades_a_sketch_locally() -> None:
         [sys.executable, "-m", "arduinograder", str(tests), "--sketch", str(reference)],
         [sys.executable, str(tests), "--sketch", str(wrong), "--name", "lab.ino"],
     ]:
-        completed = subprocess.run(command, capture_output=True, text=True, check=True)
+        # Each run needs an unused work directory; the default would be reused.
+        work = ["--work-dir", f"/tmp/arduinograder-cli-{next(_runs)}"]
+        completed = subprocess.run([*command, *work], capture_output=True, text=True, check=True)
         results = json.loads(completed.stdout)
-        assert results["gradable"] is True
+        assert results["gradable"] is True, completed.stderr
         scores.append(results["score"])
     assert scores == [1.0, 0.25]
