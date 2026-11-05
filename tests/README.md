@@ -10,6 +10,4 @@ This folder tests the course files. Each grader and workspace image keeps its ow
 
 The workspace adapter's unit tests are copied into the Velxio source, so they stay with the adapter: `workspaces/arduino/adapter/backend/tests/` runs in `backend-test` and `workspaces/arduino/adapter/frontend/src/pl/__tests__/` in `frontend-test`.
 
-`graders/arduino/tests/cases/<path under course/questions/>/` holds sketches for an autograded template and an `expected.json` mapping each to its score, or `null` when it must be ungradable. `grader-test` grades them with pytest, and CI grades them again with `scripts/grade.py --cases` in the built grader image under production limits.
-
-Nothing in `tests/` or `graders/` goes into the workspace image or its source archive, so sketches there may solve the templates. `workspaces/` goes into the archive in full, tests included, with the build files; `run.sh` checks that course files and graders stay out.
+`graders/arduino/tests/cases/<path under course/questions/>/` holds sketches for an autograded template and an `expected.json` mapping each to its score, or `null` when it must be ungradable; `grader-test` grades them with pytest, and CI grades them again with `scripts/grade.py --cases` in the built grader image under production limits. Sketches there may solve the templates, since nothing in `tests/` or `graders/` goes into the workspace image or its source archive, which holds the build files and `workspaces/` in full, tests included, with `run.sh` checking that course files and graders stay out.
